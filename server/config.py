@@ -20,5 +20,5 @@ else:
 if env_mode == "local":
     LOCAL_COLAB_SERVER_URL = os.getenv("LOCAL_COLAB_SERVER_URL")
 
-
 # 공통 환경 변수
+GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
