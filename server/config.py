@@ -32,3 +32,4 @@ if env_mode == "local":
 
 # 공통 환경 변수
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # 프로젝트 루트 경로를 전역으로 설정
