@@ -43,7 +43,7 @@ def save_dataset_to_faiss(dataset: list[dict]):
 
 
 
-# ===== 실행용 =====
+# ===== 테스트 코드 =====
 def load_dataset_from_json(json_path: str) -> list[dict]:
     with open(json_path, "r", encoding="utf-8") as f:
         return json.load(f)
