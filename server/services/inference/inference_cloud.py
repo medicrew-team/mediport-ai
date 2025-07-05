@@ -9,8 +9,8 @@
 
 # model.eval()
 #
-# def run(user_input: str) -> str:
-#     inputs = tokenizer(user_input, return_tensors="pt")
+# def run(prompt: str) -> str:
+#     inputs = tokenizer(prompt, return_tensors="pt")
 #     with torch.no_grad():
 #         outputs = model.generate(**inputs, max_new_tokens=100)
 #     return tokenizer.decode(outputs[0], skip_special_tokens=True)

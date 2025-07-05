@@ -27,6 +27,7 @@ def load_metadata():
     with open(METADATA_JSON_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
 
+
 # 검색 함수
 def search_similar_medicines(query: str, top_k: int = 1) -> list[dict]:
     index = load_faiss_index()
