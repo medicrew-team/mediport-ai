@@ -20,7 +20,10 @@ embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
 def save_dataset_to_faiss(dataset: list[dict]):
 
     # 검색에 사용할 텍스트만 추출
-    texts = [item["text"] for item in dataset]
+    # texts = [item["text"] for item in dataset]
+
+    # 임베딩 전 데이터 필드들을 문장으로 조립
+    texts = [build_text_for_embedding(item) for item in dataset]
 
     # 텍스트 → 임베딩 벡터
     embeddings = embedding_model.encode(texts, convert_to_numpy=True)
@@ -42,8 +45,25 @@ def save_dataset_to_faiss(dataset: list[dict]):
     print(f"{len(texts)}개 약 정보 저장 완료")
 
 
+# 임베딩 전 필드들을 문장으로 조립해주는 함수
+def build_text_for_embedding(item: dict) -> str:
 
-# ===== 테스트 코드 =====
+    # 필수 필드 체크
+    required_fields = ['제품명', '성분명', 'ICD', '복용법', '주의사항']
+    for field in required_fields:
+        if not item.get(field):
+            raise ValueError(f"필수 항목 누락: '{field}' 값이 없습니다.")
+
+    return (
+        f"{item.get('제품명', '')}은(는) "
+        f"{item.get('성분명', '')} 성분을 포함한 일반의약품입니다. "
+        f"사용되는 증상: {item.get('ICD', '')}. "
+        f"복용법: {item.get('복용법', '')}. "
+        f"주의사항: {item.get('주의사항', '')}."
+    )
+
+
+# ===== FAISS 저장 및 메타데이터 저장 실행 코드 =====
 def load_dataset_from_json(json_path: str) -> list[dict]:
     with open(json_path, "r", encoding="utf-8") as f:
         return json.load(f)

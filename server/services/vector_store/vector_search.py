@@ -41,9 +41,11 @@ def search_similar_medicines(query: str, top_k: int = 1) -> list[dict]:
 
     # 증상과 가장 유사한 약 정보 추출
     results = []
-    for idx in indices[0]:
+    for i, idx in enumerate(indices[0]):  # indices[0] -> # 첫 번째 질의에 대한 top_k개 결과의 인덱스 리스트
         if idx < len(metadata):
-            results.append(metadata[idx])
+            result = metadata[idx].copy()  # 원본 변형 방지
+            result["score"] = float(distances[0][i]) # 유사도 점수 추가(distances[0] -> 각 인덱스에 대한 거리)
+            results.append(result)
 
     return results
 
@@ -54,3 +56,6 @@ if __name__ == "__main__":
     result = search_similar_medicines(query)
 
     print(f"검색 결과:{result}")
+
+    for i, res in enumerate(result):
+        print(f"- 유사도 점수: {res['score']}")
