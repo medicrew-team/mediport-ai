@@ -12,7 +12,7 @@
 
   
   4. 키 파일 관리
-     - 키 관련 보안 파일은 https://drive.google.com/drive/folders/1OfOvF2gVPBus1PwJPDEPCjekq3Gaxu4b 에서 관리합니다
+     - 키 관련 보안 파일은 slack 협업툴에 공유돼있는 구글 드라이브에서 관리합니다
      - 키 파일별 적용 경로
        - vision-api-key.json (secrets)
        - huggingface_token.txt (colab_server/mediport_llm_colab.ipynb)
