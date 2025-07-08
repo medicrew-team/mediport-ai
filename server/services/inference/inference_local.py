@@ -7,8 +7,8 @@ import requests
 from server.config import LOCAL_COLAB_SERVER_URL
 
 
-def run(user_input: str) -> str:
+def run(prompt: str) -> str:
     # colab 서버의 /inference로 POST 요청을 보냄
-    response = requests.post(f"{LOCAL_COLAB_SERVER_URL}/inference", json={"user_input": user_input})
+    response = requests.post(f"{LOCAL_COLAB_SERVER_URL}/inference", json={"prompt": prompt})
     response.raise_for_status()
     return response.json()["result"]

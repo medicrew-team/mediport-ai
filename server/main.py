@@ -8,13 +8,16 @@ app = FastAPI()
 # 테스트용 라우터
 app.include_router(routers.test_router)
 
-# 추후 챗봇 개발을 위한 기본적인 모델 추론 라우터
+# 증상별 일반의약품 추천 기능을 위한 라우터
 app.include_router(routers.inference_router)
 
 # Vision API 사용을 위한 라우터
 app.include_router(routers.ocr_router)
 
+# Vector 유사도 검색 테스트를 위한 라우터
+app.include_router(routers.vector_search_test_router)
+
 
 # 디버깅 모드로 직접 실행 가능하게 하기 위한 코드
 if __name__ == "__main__":
-    uvicorn.run("server.main:app", host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run("server.main:app", host="127.0.0.1", port=8001, reload=False)
