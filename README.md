@@ -11,9 +11,16 @@
   - PR 전에 UTF-8 인코딩인지 체크하기 (인코딩이 다른 형식이면 텍스트가 깨질 수 있음)
 
   
-  4. 키 파일 관리
-     - 키 관련 보안 파일은 slack 협업툴에 공유돼있는 구글 드라이브에서 관리합니다
+  4. 환경 변수 및 키 파일 관리
+     - 환경 변수 및 키 관련 보안 파일들은 slack 협업툴에 공유돼있는 구글 드라이브에서 관리합니다
+
+     - 환경 변수 파일들 적용 경로
+        - 폴더 이름 : envs &nbsp; 적용 경로 : server/
+          
      - 키 파일별 적용 경로
-       - vision-api-key.json (secrets)
-       - huggingface_token.txt (colab_server/mediport_llm_colab.ipynb)
-       - ngrok_token.txt (mediport/colab_server/mediport_llm_colab.ipynb)
+       - 파일 이름 : vision-api-key.json 적용 경로 : secrets/
+       - 파일 이름 : huggingface_token.txt 적용 경로 : secrets/
+       - 파일 이름 : ngrok_token.txt 적용 경로 : mediport/colab_server/mediport_llm_colab.ipynb (ngrok 토큰 입력 부분에 직접 입력해줘야 합니다)
+
+
+
