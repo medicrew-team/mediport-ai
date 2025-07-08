@@ -49,8 +49,8 @@ def save_dataset_to_faiss(dataset: list[dict]):
 # 임베딩 전 필드들을 문장으로 조립해주는 함수
 def build_text_for_embedding(item: dict) -> str:
 
-    # 필수 필드 체크
-    required_fields = ['제품명', '성분명', 'ICD', '복용법', '주의사항']
+    # 필수 필드 체크 (주의사항은 build_warning_text()에서 체크)
+    required_fields = ['제품명', '성분명', 'ICD', '복용법']
     for field in required_fields:
         if not item.get(field):
             raise ValueError(f"필수 항목 누락: '{field}' 값이 없습니다.")
@@ -58,23 +58,31 @@ def build_text_for_embedding(item: dict) -> str:
     # 각 증상 문자열 뒤에 " 증상" 이라는 단어를 붙임
     icd_sentences = ', '.join([f"{s.strip()} 증상" for s in item.get('ICD', '').split(',')])
 
+
     return (
-        f"이 약은 {item.get('제품명', '')}이다. "
+        f"이 약은 {item.get('제품명', '')}입니다. "
         f"{item.get('성분명', '')}이라는 성분을 포함하고 있으며, "
-        f"{icd_sentences} 에 사용하거나 복용할 수 있다. "
+        f"{icd_sentences} 에 사용하거나 복용할 수 있습니다. "
         # f"복용법 또는 사용법은 다음과 같다: {item.get('복용법', '')}. "
-        f"그리고 주의사항은 다음과 같다: {item.get('주의사항', '')}."
+        f"{build_warning_text(item)}"
     )
 
-    # Q&A 형식
-    # return (
-    #     f"Q. {item.get('제품명', '')}은 어떤 상황에서 복용하나요?\n"
-    #     f"A. 이 약은 {icd_sentences}에 사용할 수 있습니다. "
-    #     f"{item.get('성분명', '')} 성분이 들어 있고, 주의할 점은 {item.get('주의사항', '')}입니다."
-    # )
 
+# 주의사항 문장 생성
+def build_warning_text(item: dict) -> str:
 
+    금기 = item.get("주의사항_금기대상", "").strip()
+    보관 = item.get("약품 보관법", "").strip()
 
+    parts = []
+    if 금기:
+        parts.append(f"{금기}이신 분들은 이 약을 복용하시거나 사용하시면 안 됩니다.")
+    if 보관:
+        parts.append(f"이 약은 {보관}과(와) 같은 방법으로 보관해야 합니다.")
+
+    if not parts:
+        raise ValueError("주의사항_금기대상 속성과 약품 보관법 속성 데이터가 모두 존재 하지 않습니다. 데이터 오류 확인 필요.")
+    return ' '.join(parts)
 
 
 # ===== FAISS 저장 및 메타데이터 저장 실행 코드 =====
