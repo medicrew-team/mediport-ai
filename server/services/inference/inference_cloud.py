@@ -4,35 +4,40 @@ import torch
 # 모델 로드
 model_name = "Bllossom/llama-3.2-Korean-Bllossom-AICA-5B"
 
+# 토크나이저 및 모델 로드
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
-    torch_dtype=torch.float16,
-    device_map="auto"
+    torch_dtype=torch.float16,  # GPU 메모리 절약을 위한 float16 사용
+    device_map="auto"           # 여러 GPU 환경 또는 단일 GPU 자동 할당
 )
 model.eval()
 
 
 # 추론 함수 (유지보수 쉽게 하기 위해 Colab 서버 코드 스타일과 통일)
 def run(user_input: str) -> str:
+    # 입력 프롬프트 토크나이징
     inputs = tokenizer(user_input, return_tensors="pt", padding=True)
     input_ids = inputs["input_ids"].to(model.device)
     attention_mask = inputs["attention_mask"].to(model.device)
 
+    # 모델 추론
     with torch.no_grad():
         output = model.generate(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            max_new_tokens=512,
-            do_sample=True,
-            temperature=0.7,
+            max_new_tokens=512,                     # 생성 최대 길이
+            do_sample=True,                         # 샘플링 기반 생성 (비결정적)
+            temperature=0.7,                        # 생성 다양성 제어 (낮을수록 보수적)
             top_p=0.9,
             eos_token_id=tokenizer.eos_token_id,
-            pad_token_id=tokenizer.eos_token_id
+            pad_token_id=tokenizer.eos_token_id     # padding 시 EOS 토큰 재사용
         )
 
+    # 디코딩 (토큰 → 텍스트)
     decoded = tokenizer.decode(output[0], skip_special_tokens=True)
 
+    # 프롬프트 부분 제거하고 생성된 응답만 반환
     if decoded.startswith(user_input):
         return decoded[len(user_input):].strip()
     else:
