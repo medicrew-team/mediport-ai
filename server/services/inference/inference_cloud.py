@@ -1,3 +1,4 @@
+
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 
@@ -13,11 +14,10 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 model.eval()
 
-
 # 추론 함수 (유지보수 쉽게 하기 위해 Colab 서버 코드 스타일과 통일)
-def run(user_input: str) -> str:
+def run(prompt: str) -> str:
     # 입력 프롬프트 토크나이징
-    inputs = tokenizer(user_input, return_tensors="pt", padding=True)
+    inputs = tokenizer(prompt, return_tensors="pt", padding=True)
     input_ids = inputs["input_ids"].to(model.device)
     attention_mask = inputs["attention_mask"].to(model.device)
 
@@ -38,7 +38,7 @@ def run(user_input: str) -> str:
     decoded = tokenizer.decode(output[0], skip_special_tokens=True)
 
     # 프롬프트 부분 제거하고 생성된 응답만 반환
-    if decoded.startswith(user_input):
-        return decoded[len(user_input):].strip()
+    if decoded.startswith(prompt):
+        return decoded[len(prompt):].strip()
     else:
         return decoded
