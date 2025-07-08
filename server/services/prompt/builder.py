@@ -5,28 +5,29 @@ def build_prompt(user_input: str, doc: dict) -> str:
 [사용자 질문]
 {user_input}
 
-[약 이름]
-{doc.get("name", "")}
+[제품명]
+{doc.get("제품명", "")}
 
-[효능 및 증상]
-{", ".join(doc.get("symptoms", []))}
+[사용되는 증상]
+{doc.get("ICD", "")}
 
-[약 설명]
-{doc.get("text", "")}
+[성분명]
+{doc.get("성분명", "")}
 
 [복용법]
-{doc.get("dosage", "")}
+{doc.get("복용법", "")}
 
 [주의사항]
-{doc.get("cautions", "")}
+{doc.get("주의사항", "")}
 
-[연령 제한]
-{doc.get("age_limit", "")}
+[이미지 URL]
+{doc.get("약품이미지(URL)", "")}
 
-[성분]
-{", ".join(doc.get("ingredients", []))}
-
-[제형]
-{doc.get("form", "")}
+[기타 정보]
+- BIT: {doc.get("BIT", "")}
+- 구분: {doc.get("구분", "")}
+- ATC 코드: {doc.get("ATC코드", "")}
+- 제품 코드: {doc.get("제품코드", "")}
+- 주성분코드: {doc.get("주성분코드", "")}
 
 답변:"""

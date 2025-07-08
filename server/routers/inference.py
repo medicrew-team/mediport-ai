@@ -23,7 +23,7 @@ async def post_inference(request: InferenceRequest):
         docs = search_similar_medicines(user_input, top_k=1)
 
         if not docs:
-            return {"result": "질문의 증상과 관련된 약 데이터 를 찾을 수 없습니다. 죄송합니다"}
+            return {"result": "관련된 약 데이터 를 찾을 수 없습니다. 죄송합니다"}
 
         # prompt 설계
         prompt = build_prompt(user_input, docs[0])

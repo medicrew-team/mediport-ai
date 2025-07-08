@@ -14,6 +14,9 @@ app.include_router(routers.inference_router)
 # Vision API 사용을 위한 라우터
 app.include_router(routers.ocr_router)
 
+# Vector 유사도 검색 테스트를 위한 라우터
+app.include_router(routers.vector_search_test_router)
+
 
 # 디버깅 모드로 직접 실행 가능하게 하기 위한 코드
 if __name__ == "__main__":
