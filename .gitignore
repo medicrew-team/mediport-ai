@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 secrets/
 server/envs/
+
+# FAISS 인덱스 및 메타데이터 무시
+data/*.index
+data/*_metadata.json
