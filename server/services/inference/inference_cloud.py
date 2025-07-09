@@ -1,6 +1,28 @@
 
 from transformers import AutoTokenizer, AutoModelForCausalLM
+from huggingface_hub import login
 import torch
+import os
+
+
+### Hugging Face 로그인 ###
+
+# 현재 파일 기준 최상위 프로젝트 루트 경로 설정
+base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Hugging Face 토큰 파일 경로
+HF_TOKEN_PATH = os.path.join(base_dir, "secrets", "huggingface_token.txt")
+
+# 토큰 파일 읽어서 로그인
+if os.path.exists(HF_TOKEN_PATH):
+    with open(HF_TOKEN_PATH, "r") as f:
+        hf_token = f.read().strip()
+    login(hf_token)
+else:
+    raise FileNotFoundError(f"[ERROR] Hugging Face token not found at: {HF_TOKEN_PATH}")
+
+### Hugging Face 로그인 ###
+
 
 # 모델 로드
 model_name = "Bllossom/llama-3.2-Korean-Bllossom-AICA-5B"
