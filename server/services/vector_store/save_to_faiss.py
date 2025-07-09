@@ -73,15 +73,17 @@ def build_warning_text(item: dict) -> str:
 
     금기 = item.get("주의사항_금기대상", "").strip()
     보관 = item.get("약품 보관법", "").strip()
+    음식 = item.get("음식 상호작용", "").strip()
 
     parts = []
     if 금기:
         parts.append(f"{금기}이신 분들은 이 약을 복용하시거나 사용하시면 안 됩니다.")
     if 보관:
         parts.append(f"이 약은 {보관}과(와) 같은 방법으로 보관해야 합니다.")
-
+    if 음식:
+        parts.append(f"음식 섭취 시 주의사항: {음식}")
     if not parts:
-        raise ValueError("주의사항_금기대상 속성과 약품 보관법 속성 데이터가 모두 존재 하지 않습니다. 데이터 오류 확인 필요.")
+        raise ValueError("주의사항 관련 데이터들이 모두 존재 하지 않습니다. 데이터 오류 확인 필요.")
     return ' '.join(parts)
 
 
