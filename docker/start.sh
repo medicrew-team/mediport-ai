@@ -2,7 +2,7 @@ echo "FAISS 벡터 DB 저장 여부 확인 중..."
 
 if [ ! -f "./data/medicine_faiss.index" ]; then
     echo "벡터 DB가 없어서 save_to_faiss.py 실행합니다."
-    python server/save_to_faiss.py
+    python server/services/vector_store/save_to_faiss.py
 else
     echo "벡터 DB가 이미 존재합니다. 그대로 서버 실행합니다."
 fi
