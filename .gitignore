@@ -5,6 +5,11 @@ __pycache__/
 secrets/
 server/envs/
 
+# .gitkeep 파일은 예외 처리
+!secrets/.gitkeep
+!server/envs/.gitkeep
+
 # FAISS 인덱스 및 메타데이터 무시
 data/*.index
 data/*_metadata.json
+
