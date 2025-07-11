@@ -25,7 +25,11 @@ jobs:
     - name: Create vision-api-key.json file
       run: |
         mkdir -p secrets
-        echo "${{ secrets.VISION_API_KEY }}" > secrets/vision-api-key.json
+        printf "%s" "${{ secrets.VISION_API_KEY }}" > secrets/vision-api-key.json
+
+    # vision-api-key 디버깅용
+    - name: Check vision-api-key.json content
+      run: cat secrets/vision-api-key.json
     
     # 현재 날짜와 커밋 해시를 환경변수로 저장
     - name: Set Docker image tags
