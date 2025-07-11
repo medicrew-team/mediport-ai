@@ -26,6 +26,7 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v4
       with:
-        context: .
+        context: ./docker     # Dockerfile 위치 기준으로 설정
+        file: ./docker/Dockerfile
         push: true
         tags: kdykdy1/medipoart-ai-server:latest
