@@ -11,17 +11,12 @@
   - PR 전에 UTF-8 인코딩인지 체크하기 (인코딩이 다른 형식이면 텍스트가 깨질 수 있음)
 
   
-  4. 환경 변수 및 키 파일 관리 (※ 환경 변수 및 키 관련 보안 파일들은 slack 협업툴에 공유돼있는 구글 드라이브에서 관리합니다 ※ )
-
-     - 환경 변수 파일들 적용 경로
-        -  폴더 이름 : envs &nbsp; 적용 해야할 경로 : server/
+  4. 키 파일 관리 (※ 키 관련 보안 파일들은 slack 협업툴에 공유돼있는 구글 드라이브에서 관리합니다 ※ )
           
-     - 로컬 개발환경 구축에 필요한 보완키 적용 경로 
-        - 폴더 이름 : secrets &nbsp; 적용 해야할 경로 : 프로젝트 최상위 경로
-        
-        - Colab 환경 구축시 필요한 보안키 적용 
-          - 파일 이름 : secrets/huggingface_token.txt 적용 경로 : mediport/colab_server/mediport_llm_colab.ipynb (Colab 환경에서 실행 시 huggingface 토큰 입력 부분에 직접 토큰을 입력해줘야 합니다) 
-          - 파일 이름 : secrets/ngrok_token.txt 적용 경로 : mediport/colab_server/mediport_llm_colab.ipynb (Colab 환경에서 실행 시 ngrok 토큰 입력 부분에 직접 토큰을 입력해줘야 합니다)
+     - 개발환경 구축에 필요한 보완키 적용 경로 
+        - 파일 이름 : secrets/vision-api-key.json &nbsp; 적용 경로 : secrets/ 
+        - 파일 이름 : secrets/huggingface_token.txt &nbsp; 적용 경로 : colab_server/mediport_llm_colab.ipynb (Colab 환경에서 실행 시 huggingface 토큰 입력 부분에 직접 토큰을 입력해줘야 합니다) 
+        - 파일 이름 : secrets/ngrok_token.txt &nbsp; 적용 경로 : colab_server/mediport_llm_colab.ipynb (Colab 환경에서 실행 시 ngrok 토큰 입력 부분에 직접 토큰을 입력해줘야 합니다)
 
 
 
