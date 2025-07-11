@@ -3,15 +3,12 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from huggingface_hub import login
 import torch
 import os
-
+from server.config import BASE_DIR
 
 ### Hugging Face 로그인 ###
 
-# 현재 파일 기준 최상위 프로젝트 루트 경로 설정
-base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 # Hugging Face 토큰 파일 경로
-HF_TOKEN_PATH = os.path.join(base_dir, "secrets", "huggingface_token.txt")
+HF_TOKEN_PATH = os.path.join(BASE_DIR, "secrets", "huggingface_token.txt")
 
 # 토큰 파일 읽어서 로그인
 if os.path.exists(HF_TOKEN_PATH):
