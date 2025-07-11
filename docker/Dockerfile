@@ -14,11 +14,6 @@ COPY docker/start.sh ./start.sh
 COPY data/ ./data
 COPY secrets/ ./secrets
 
-COPY server/envs/.env ./server/envs/.env
-COPY server/envs/.env.local ./server/envs/.env.local
-COPY server/envs/.env.cloud ./server/envs/.env.cloud
-
-
 # 포트 개방 (FastAPI 기본 포트)
 EXPOSE 8000
 
