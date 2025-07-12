@@ -21,13 +21,18 @@ jobs:
         mkdir -p secrets
         echo "${{ secrets.HUGGINGFACE_TOKEN }}" > secrets/huggingface_token.txt
 
+    # huggingface_token 디버깅용 (정상 저장 여부 확인)
+    - name: Check huggingface_token.txt content
+      run: cat secrets/huggingface_token.txt
+
+
     # vision-api-key 파일 생성 (GitHub Secrets에서 받아옴)
     - name: Create vision-api-key.json file
       run: |
         mkdir -p secrets
-        printf "%s" "${{ secrets.VISION_API_KEY }}" > secrets/vision-api-key.json
+        echo "${{ secrets.VISION_API_KEY }}" | base64 -d > secrets/vision-api-key.json
 
-    # vision-api-key 디버깅용
+    # vision-api-key 디버깅용 (정상 저장 여부 확인)
     - name: Check vision-api-key.json content
       run: cat secrets/vision-api-key.json
     
