@@ -7,5 +7,10 @@ else
     echo "벡터 DB가 이미 존재합니다. 그대로 서버 실행합니다."
 fi
 
+# Cloudflare Tunnel 실행 (백그라운드)
+echo "Cloudflare Tunnel 실행 중..."
+cloudflared tunnel --config /workspace/.cloudflared/config.yml run mediport-ai-tunnel &
+
+# FastAPI 서버 실행
 echo "FastAPI 서버 실행 시작"
 uvicorn server.main:app --host 0.0.0.0 --port 8000
