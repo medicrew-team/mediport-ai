@@ -51,6 +51,7 @@ def build_text_for_embedding(item: dict) -> str:
 
     # 필수 필드 체크 (주의사항은 build_warning_text()에서 체크)
     required_fields = ['제품명', '성분명', 'ICD', '복용법']
+
     for field in required_fields:
         if not item.get(field):
             raise ValueError(f"필수 항목 누락: '{field}' 값이 없습니다.")
@@ -58,11 +59,10 @@ def build_text_for_embedding(item: dict) -> str:
     # 각 증상 문자열 뒤에 " 증상" 이라는 단어를 붙임
     icd_sentences = ', '.join([f"{s.strip()} 증상" for s in item.get('ICD', '').split(',')])
 
-
     return (
-        f"이 약은 {item.get('제품명')}입니다. "
-        f"{item.get('성분명', '')}이라는 성분을 포함하고 있으며, "
-        f"{icd_sentences} 에 사용하거나 복용할 수 있습니다. "
+        # f"이 약은 {item.get('제품명', '')}입니다. "
+        # f"{item.get('성분명', '')}이라는 성분을 포함하고 있으며, "
+        f"{item.get('제품명')} 약품은 {icd_sentences} 에 사용하거나 복용할 수 있습니다. "
         # f"복용법 또는 사용법은 다음과 같다: {item.get('복용법', '')}. "
         f"{build_warning_text(item)}"
     )
@@ -76,14 +76,31 @@ def build_warning_text(item: dict) -> str:
     일상 = item.get("일상 상호작용", "").strip()
     의약품 = item.get("의약품 상호작용", "").strip() # 병행 금지 의약품
 
+    ### 의약품 상호작용 문장 생성 ###
+    interaction_text = ""
+    if 의약품:
+        interaction_drug_names = [
+            drug.strip()
+            for drug in item.get('의약품 상호작용', '').split(',')
+            if drug.strip()
+        ]
 
-    # 의약품 상호작용 문장 생성
-    names = [name.strip() for name in item.get('의약품 상호작용', '').split(',') if name.strip()]
-    if names:
-        joined_names = ', '.join(names)
-        interaction_sentences = f"{item['제품명']}은(는) {joined_names}과(와) 병용해서 사용하거나 복용하면 안 됩니다."
-    else:
-        interaction_sentences = ''
+        interaction_sentences = []
+
+        for drug in interaction_drug_names:
+            # 정방향 문장
+            interaction_sentences.append(
+                f"{item['제품명']}은(는) {drug}과(와) 병용해서 사용하거나 복용하면 안 됩니다."
+            )
+            # 역방향 문장
+            interaction_sentences.append(
+                f"{drug}은(는) {item['제품명']}과(와) 병용해서 사용하거나 복용하면 안 됩니다."
+            )
+
+        # 결과 합치기
+        interaction_text = ' '.join(interaction_sentences)
+
+    ### 의약품 상호작용 문장 생성 ###
 
     parts = []
     if 금기:
@@ -93,7 +110,7 @@ def build_warning_text(item: dict) -> str:
     if 일상:
         parts.append(f"일상 생활에서의 주의사항: {일상}")
     if 의약품:
-        parts.append(interaction_sentences)
+        parts.append(interaction_text)
 
     if not parts:
         raise ValueError("주의사항 관련 데이터들이 모두 존재 하지 않습니다. 데이터 오류 확인 필요.")

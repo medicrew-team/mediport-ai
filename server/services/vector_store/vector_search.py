@@ -51,29 +51,69 @@ def init_resources():
 
 
 
-# 검색 함수
 def search_similar_medicines(query: str, top_k: int = 1) -> list[dict]:
 
     # 모델/인덱스/메타데이터가 아직 로딩 안됐으면 로딩
     if embedding_model is None or faiss_index is None or metadata is None:
         init_resources()
 
+    # query_lower = query.lower().strip()
+    #
+    # # 문자열 우선 검색(제품명, 의약품 상호작용, 성분명)
+    # exact_matches = []
+    # for item in metadata:
+    #     제품명 = item.get('제품명', '').lower()
+    #     성분명 = item.get('성분명', '').lower()
+    #     의약품_상호작용 = item.get('의약품 상호작용', '').lower()
+    #
+    #     if (query_lower in 제품명) or (query_lower in 성분명) or (query_lower in 의약품_상호작용):
+    #         item_copy = item.copy()
+    #         item_copy["score"] = 0.0  # 정확 매칭은 최고 우선순위
+    #         exact_matches.append(item_copy)
+    #
+    # # 문자열 검색 결과가 있으면 바로 반환
+    # if exact_matches:
+    #     return exact_matches[:top_k]
 
-    # 질의 벡터화
-    query_embedding = embedding_model.encode([query], convert_to_numpy=True)
 
-    # 유사도 검색
-    distances, indices = faiss_index.search(query_embedding, top_k)
+    # partial_matches: 문자열로 직접 매칭된 약 정보들을 담는 리스트
+    partial_matches = []
 
-    # 증상과 가장 유사한 약 정보 추출
+    for item in metadata:
+        # 검색에 사용할 필드들 (제품명, 성분명, 병용금기약)
+        searchable_fields = [
+            item.get("제품명", ""),
+            item.get("성분명", ""),
+            item.get("의약품 상호작용", "")
+        ]
+
+        # 사용자의 질의(query)에 위 필드들 중 일부라도 정확히 포함되어 있는지 확인
+        # ex) query = "트롤락주와 병용하면 안되는 약" → (제품명, 성분명, 병용금기약)중에 트롤락주 데이터가 있다면 매칭
+        if any(field in query for field in searchable_fields if field):
+            matched_item = item.copy()
+            matched_item["score"] = 0
+            partial_matches.append(matched_item)
+
+    # 문자열 매칭된 결과가 있으면 벡터 검색은 스킵하고 바로 반환
+    if partial_matches:
+        return partial_matches[:top_k]
+
+
+    # 문자열 검색 결과가 없을 경우, 벡터 유사도 검색으로 넘어감
+    query_embedding = embedding_model.encode([query], normalize_embeddings=True, convert_to_numpy=True)     # 질의 벡터화
+    distances, indices = faiss_index.search(query_embedding, top_k)                                         # 유사도 검색
+
     results = []
-    for i, idx in enumerate(indices[0]):  # indices[0] -> # 첫 번째 질의에 대한 top_k개 결과의 인덱스 리스트
+    for i, idx in enumerate(indices[0]):
         if idx < len(metadata):
-            result = metadata[idx].copy()  # 원본 변형 방지
-            result["score"] = float(distances[0][i]) # 유사도 점수 추가(distances[0] -> 각 인덱스에 대한 거리)
+            result = metadata[idx].copy()
+            result["score"] = float(distances[0][i])
             results.append(result)
 
     return results
+
+
+
 
 
 # ===== 테스트 코드 =====
