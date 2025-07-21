@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 배포에 필요한 코드 복사
 COPY server/ ./server
-COPY docker/start.sh ./start.sh
+COPY deploy/docker/start.sh ./start.sh
 COPY data/ ./data
 COPY secrets/ ./secrets
 
