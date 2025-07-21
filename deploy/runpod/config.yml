@@ -1,0 +1,6 @@
+tunnel: mediport-ai-tunnel
+
+ingress:
+  - hostname: mediport-ai-dev.store
+    service: http://localhost:8000
+  - service: http_status:404
