@@ -9,7 +9,7 @@ fi
 
 # Cloudflare Tunnel 실행 (백그라운드)
 echo "Cloudflare Tunnel 실행 중..."
-cloudflared tunnel --config /workspace/.cloudflared/config.yml run mediport-ai-tunnel &
+/workspace/bin/cloudflared tunnel --config /workspace/.cloudflared/config.yml run &
 
 # FastAPI 서버 실행
 echo "FastAPI 서버 실행 시작"
