@@ -52,6 +52,9 @@ async def post_inference(request: InferenceRequest):
         # 실행 환경에 따른 추론 서버(local) or 추론 로직(cloud)으로 연결
         result = run_inference(prompt)
 
+        # 약명 Placeholder 다시 원본으로 복원
+        # replaced_result = result.replace("[MEDICINE_NAME]", medicine_name)
+
         # 번역이 필요한 경우에 번역 수행
         if target_lang != "ko":
             result = translator.translate(result, dest=target_lang).text

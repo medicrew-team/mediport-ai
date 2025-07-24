@@ -22,9 +22,12 @@ def format_field(label: str, value: str) -> str:
 
 def build_prompt(user_input: str, doc: dict) -> str:
 
+    제품명 = doc.get("제품명", "").strip()
+    # placeholder = "[MEDICINE_NAME]"
+
     fields = [
-        ("약품 구분", "일반의약품."),
-        ("제품명", doc.get("제품명")),
+        ("약품 구분", "일반의약품"),
+        # ("제품명", doc.get("제품명")),
         ("사용되는 증상", doc.get("ICD")),
         ("성분명", doc.get("성분명")),
         ("복용법", doc.get("복용법")),
@@ -41,12 +44,20 @@ def build_prompt(user_input: str, doc: dict) -> str:
     formatted_sections = [format_field(label, value) for label, value in fields if value.strip()]
     section_text = "\n\n".join(formatted_sections)
 
-    return f"""당신은 외국인의 복약을 도와주는 약 정보 안내 챗봇입니다.
+    prompt =  f"""당신은 외국인의 복약을 도와주는 약 정보 안내 챗봇입니다.
 아래는 사용자의 증상에 맞는 약에 대한 상세 정보이며, 사용자의 질문에 친절하고 정확하게 답변해 주세요.
-
+      
+    
 [사용자 질문]
 {user_input}
 
-{section_text}
+         
+[관련 약 이름]
+"{제품명}"  # ⚠️ 중요: 이 약 이름은 문장 내에서 반드시 그대로 사용하세요. 절대 변경하거나 줄이지 마세요.
 
+[약품 상세 정보들]
+    {section_text}
+    
 답변:"""
+
+    return prompt
