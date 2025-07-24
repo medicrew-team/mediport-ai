@@ -28,6 +28,9 @@ def build_prompt(user_input: str, doc: dict) -> str:
     fields = [
         ("약품 구분", "일반의약품"),
         # ("제품명", doc.get("제품명")),
+        ("약품 제형", doc.get("제형")),
+        ("약품 용량", doc.get("용량","")),
+        # ("약품 작용부위", doc.get("대분류"))
         ("사용되는 증상", doc.get("ICD")),
         ("성분명", doc.get("성분명")),
         ("복용법", doc.get("복용법")),
