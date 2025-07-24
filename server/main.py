@@ -6,7 +6,7 @@ import uvicorn
 app = FastAPI()
 
 # 테스트용 라우터
-app.include_router(routers.test_router)
+# app.include_router(routers.test_router)
 
 # 증상별 일반의약품 추천 기능을 위한 라우터
 app.include_router(routers.inference_router)

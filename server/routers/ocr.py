@@ -5,7 +5,10 @@ from server.services.ocr.preprocess import preprocess_text
 router = APIRouter()
 
 # 사용자가 업로드한 이미지에서 텍스트를 추출하여 반환하는 API
-@router.post("/ocr/image")
+@router.post("/ocr/image",
+    summary="OCR Image",
+    description="이미지를 업로드하면 OCR을 통해 텍스트를 추출합니다."
+)
 async def ocr_image(file: UploadFile = File(...)):
     try:
         content = await file.read()

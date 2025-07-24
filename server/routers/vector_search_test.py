@@ -8,7 +8,11 @@ class InferenceRequest(BaseModel):
     user_input: str
 
 # Vector 유사도 검색 테스트용 API
-@router.post("/vector_search_test")
+@router.post(
+    "/vector_search_test",
+    summary="챗봇 RAG 유사도 검색 테스트용 API",
+    description=""
+)
 async def search_api(request: InferenceRequest):
     user_input = request.user_input
     results = search_similar_medicines(user_input, top_k=1)
