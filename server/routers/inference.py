@@ -45,6 +45,9 @@ async def post_inference(request: InferenceRequest):
         if not docs:
             return {"result": "관련된 약 데이터 를 찾을 수 없습니다. 죄송합니다"}
 
+        # 약명 추출
+        medicine_name = docs[0].get("제품명", "")
+
         # prompt 설계
         prompt = build_prompt(user_input, docs[0])
 
@@ -57,7 +60,8 @@ async def post_inference(request: InferenceRequest):
 
         # 번역이 필요한 경우에 번역 수행
         if target_lang != "ko":
-            result = translator.translate(result, dest=target_lang).text
+            # result = translator.translate(result, dest=target_lang).text
+            result = await protect_medicine_name_translate(result, medicine_name, target_lang)
 
         return {"result": result}
 
@@ -65,3 +69,19 @@ async def post_inference(request: InferenceRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+
+
+async def protect_medicine_name_translate(text: str, medicine_name: str, target_lang: str) -> str:
+
+    placeholder = "[MEDICINE_1]"
+
+    # 번역 전 약명 placeholder로 치환
+    protected_text = text.replace(medicine_name, placeholder)
+
+    # 번역 수행
+    translated = translator.translate(protected_text, dest=target_lang).text
+
+    # 번역 후 약명 복원
+    restored_text = translated.replace(placeholder, medicine_name)
+    return restored_text
