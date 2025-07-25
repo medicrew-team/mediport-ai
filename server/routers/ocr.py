@@ -1,5 +1,5 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException
-from server.services.ocr.vision_api import extract_text_from_image
+from server.services.ocr.vision_api import extract_text_from_image, match_table_format
 from server.services.ocr.preprocess import preprocess_text
 
 router = APIRouter()
@@ -19,6 +19,10 @@ async def ocr_image(file: UploadFile = File(...)):
         # 추출한 텍스트를 전처리 하여 깔끔한 형태로 정리
         # cleaned_text = preprocess_text(raw_text)
 
-        return {"extracted_text": raw_text}
+        # 표 기반 매핑 실행
+        result = match_table_format(raw_text)
+
+        return {"parsed_result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
