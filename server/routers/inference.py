@@ -71,10 +71,10 @@ async def post_inference(request: InferenceRequest):
 
 
 
-
+# 챗봇 추론 결과에서 약명 이름은 제외하고 번역 처리 하는 함수
 async def protect_medicine_name_translate(text: str, medicine_name: str, target_lang: str) -> str:
 
-    placeholder = "[MEDICINE_1]"
+    placeholder = "MED123456"
 
     # 번역 전 약명 placeholder로 치환
     protected_text = text.replace(medicine_name, placeholder)
@@ -83,5 +83,13 @@ async def protect_medicine_name_translate(text: str, medicine_name: str, target_
     translated = translator.translate(protected_text, dest=target_lang).text
 
     # 번역 후 약명 복원
-    restored_text = translated.replace(placeholder, medicine_name)
+    # restored_text = translated.replace(placeholder, medicine_name)
+
+    # 번역 후 placeholder가 변형된 모든 경우 복원 처리
+    restored_text = (
+        translated.replace(placeholder, medicine_name)
+        .replace(placeholder.lower(), medicine_name)  # med123456
+        .replace(placeholder.capitalize(), medicine_name)  # Med123456
+    )
+
     return restored_text
