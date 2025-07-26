@@ -39,6 +39,10 @@ async def post_inference(request: InferenceRequest):
         user_input = request.user_input
         target_lang = request.lang.lower()
 
+        # 비한글 입력이면 한국어로 먼저 번역해서 벡터 검색에 사용
+        if target_lang != "ko":
+            user_input = translator.translate(user_input, dest="ko").text
+
         # 질문 기반으로 약 문서 유사도 검색
         docs = search_similar_medicines(user_input, top_k=1)
 
