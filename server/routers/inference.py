@@ -48,6 +48,9 @@ async def post_inference(request: InferenceRequest):
         # 약명 추출
         medicine_name = docs[0].get("제품명", "")
 
+        # 성분명(들)을 추출
+        ingredient_name = docs[0].get("성분명", "")
+
         # prompt 설계
         prompt = build_prompt(user_input, docs[0])
 
@@ -61,7 +64,7 @@ async def post_inference(request: InferenceRequest):
         # 번역이 필요한 경우에 번역 수행
         if target_lang != "ko":
             # result = translator.translate(result, dest=target_lang).text
-            result = await protect_medicine_name_translate(result, medicine_name, target_lang)
+            result = await protect_keywords_translate(result, medicine_name, ingredient_name, target_lang)
 
         return {"result": result}
 
@@ -71,25 +74,55 @@ async def post_inference(request: InferenceRequest):
 
 
 
-# 챗봇 추론 결과에서 약명 이름은 제외하고 번역 처리 하는 함수
-async def protect_medicine_name_translate(text: str, medicine_name: str, target_lang: str) -> str:
+# 챗봇 추론 결과에서 약명/성분명 제외하고 번역 처리 하는 함수
+async def protect_keywords_translate(result: str, medicine_name: str, ingredient_name: str, target_lang: str) -> str:
 
-    placeholder = "MED123456"
+    placeholder_medicine_name = "MED123456"
+    placeholder_ingredient_name = "INGR"
+
+    # 성분명 쉼표로 분리
+    ingredient_list = [i.strip() for i in ingredient_name.split(",") if i.strip()]
+
+    # 매핑: 성분명 → placeholder (예: "chlorpheniramine" → "INGR0", pseudoephedrine -> "INGR1")
+    placeholder_map = {name: f"{placeholder_ingredient_name}{idx}" for idx, name in enumerate(ingredient_list)}
+
+
+
+    # 번역 전 약명/성분명 치환
+    # protected_result = (result
+    #                   .replace(medicine_name, placeholder_medicine_name)
+    #                   .replace(ingredient_name, placeholder_ingredient_name))
+
 
     # 번역 전 약명 placeholder로 치환
-    protected_text = text.replace(medicine_name, placeholder)
+    protected_result = result.replace(medicine_name, placeholder_medicine_name)
+
+    # 번역 전 성분명(들)을 placeholder로 치환
+    for ingredient_name, ph in placeholder_map.items():
+        # 대소문자 고려해서 replace
+        protected_result = protected_result.replace(ingredient_name, ph)
+        protected_result = protected_result.replace(ingredient_name.lower(), ph)
+        protected_result = protected_result.replace(ingredient_name.capitalize(), ph)
+
 
     # 번역 수행
-    translated = translator.translate(protected_text, dest=target_lang).text
+    translated = translator.translate(protected_result, dest=target_lang).text
 
-    # 번역 후 약명 복원
-    # restored_text = translated.replace(placeholder, medicine_name)
-
-    # 번역 후 placeholder가 변형된 모든 경우 복원 처리
-    restored_text = (
-        translated.replace(placeholder, medicine_name)
-        .replace(placeholder.lower(), medicine_name)  # med123456
-        .replace(placeholder.capitalize(), medicine_name)  # Med123456
+    # 약명 복원 (대소문자 변형까지 고려)
+    restored_result = (
+        translated
+        .replace(placeholder_medicine_name, medicine_name)
+        .replace(placeholder_medicine_name.lower(), medicine_name)  # med123456
+        .replace(placeholder_medicine_name.capitalize(), medicine_name)  # Med123456
     )
 
-    return restored_text
+    # 성분명 복원 (대소문자 변형까지 고려)
+    for ingredient_name, ph in placeholder_map.items():
+        restored_result = (
+            restored_result
+            .replace(ph, ingredient_name)
+            .replace(ph.lower(), ingredient_name)
+            .replace(ph.capitalize(), ingredient_name)
+        )
+
+    return restored_result

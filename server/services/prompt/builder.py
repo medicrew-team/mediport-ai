@@ -22,17 +22,19 @@ def format_field(label: str, value: str) -> str:
 
 def build_prompt(user_input: str, doc: dict) -> str:
 
-    제품명 = doc.get("제품명", "").strip()
+    # 제품명 = doc.get("제품명", "").strip()
+    # 성분명 = doc.get("성분명", "").strip()
+
     # placeholder = "[MEDICINE_NAME]"
 
     fields = [
         ("약품 구분", "일반의약품"),
-        # ("제품명", doc.get("제품명")),
+        ("제품명", doc.get("제품명") + " # ⚠️ 중요: 이 제품명은 문장 내에서 반드시 그대로 사용하세요. 절대 변경하거나 줄이지 마세요."),
         ("사용되는 증상", doc.get("ICD")),
-        ("성분명", doc.get("성분명")),
+        ("성분명", doc.get("성분명") + " # ⚠️ 중요: 성분명(들)은 영문 명칭(들)을 그대로 사용해야 하며, 절대 한글로 번역하거나 음역해서는 안 됩니다."),
         ("복용법", doc.get("복용법")),
         ("복용 또는 사용 금기 대상", doc.get("주의사항_금기대상", "")),
-        ("약품 보관법", doc.get("약품 보관법", "")),
+        ("약품 보관법", doc.get("약품 보관법", "") ),
         ("일상 생활에서의 주의사항", doc.get("일상 상호작용", "")),
         (f"{doc.get('제품명')}와(과) 같이 사용하거나 복용하면 안되는 의약품", doc.get("의약품 상호작용", "")),
         (f"{doc.get('제품명')}과(와) {doc.get('의약품 상호작용', '')}을(를) 같이 사용하거나 복용할 경우 나타날 수 있는 이상반응", doc.get("이상 반응", "")),
@@ -50,14 +52,10 @@ def build_prompt(user_input: str, doc: dict) -> str:
     
 [사용자 질문]
 {user_input}
+        
+[관련 약품 상세 정보들]
+{section_text}
 
-         
-[관련 약 이름]
-"{제품명}"  # ⚠️ 중요: 이 약 이름은 문장 내에서 반드시 그대로 사용하세요. 절대 변경하거나 줄이지 마세요.
-
-[약품 상세 정보들]
-    {section_text}
-    
 답변:"""
 
     return prompt
