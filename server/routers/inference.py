@@ -39,6 +39,10 @@ async def post_inference(request: InferenceRequest):
         user_input = request.user_input
         target_lang = request.lang.lower()
 
+        # 비한글 입력이면 한국어로 먼저 번역해서 벡터 검색에 사용
+        if target_lang != "ko":
+            user_input = translator.translate(user_input, dest="ko").text
+
         # 질문 기반으로 약 문서 유사도 검색
         docs = search_similar_medicines(user_input, top_k=1)
 
@@ -57,6 +61,9 @@ async def post_inference(request: InferenceRequest):
         # 검색된 문서를 LLM에게 질문과 함께 전달
         # 실행 환경에 따른 추론 서버(local) or 추론 로직(cloud)으로 연결
         result = run_inference(prompt)
+
+        # 불필요한 추가 텍스트 제거 (후처리)
+        result = truncate_after_final_sentence(result)
 
         # 약명 Placeholder 다시 원본으로 복원
         # replaced_result = result.replace("[MEDICINE_NAME]", medicine_name)
@@ -126,3 +133,12 @@ async def protect_keywords_translate(result: str, medicine_name: str, ingredient
         )
 
     return restored_result
+
+
+# 모델이 생성한 응답에서 특정 문장 이후의 텍스트들을 잘라내는 역할을 하는 함수
+def truncate_after_final_sentence(text: str) -> str:
+    end_marker = "정확한 정보를 얻기 위해서는 의사나 약사와 상의하는 것이 중요합니다."
+    idx = text.find(end_marker)
+    if idx != -1:
+        return text[:idx + len(end_marker)].strip()
+    return text.strip()  # 못 찾으면 원본 그대로
