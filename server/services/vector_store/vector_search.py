@@ -87,6 +87,15 @@ def search_similar_medicines(query: str, top_k: int = 1) -> list[dict]:
             item.get("의약품 상호작용", "")
         ]
 
+        # ICD 개별 분리
+        icd_values = item.get("ICD", "")
+        icd_list = [icd.strip() for icd in icd_values.split(',') if icd.strip()]
+
+        # ICD에서 '증상' 제거한 버전도 함께 추가
+        icd_clean_list = [icd.replace("증상", "").strip() for icd in icd_list]
+
+        searchable_fields.extend(icd_clean_list)
+
         # 사용자의 질의(query)에 위 필드들 중 일부라도 정확히 포함되어 있는지 확인
         # ex) query = "트롤락주와 병용하면 안되는 약" → (제품명, 성분명, 병용금기약)중에 트롤락주 데이터가 있다면 매칭
         if any(field in query for field in searchable_fields if field):
