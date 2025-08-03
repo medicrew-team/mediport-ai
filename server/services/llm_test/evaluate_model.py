@@ -4,7 +4,7 @@ import requests
 
 # 테스트 데이터셋 경로
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TEST_DATASET_PATH = os.path.join(BASE_DIR, "test_questions.json")
+TEST_DATASET_PATH = os.path.join(BASE_DIR, "data", "test_questions.json")
 
 # FastAPI 서버 주소
 API_URL = "http://127.0.0.1:8001/inference"  # 실제 서버 주소로 변경
