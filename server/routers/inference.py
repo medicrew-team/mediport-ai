@@ -9,7 +9,7 @@ import re
 
 
 # 라우터 객체 생성
-router = APIRouter()\
+router = APIRouter()
 
 # 구글 번역기 초기화
 translator = Translator()
