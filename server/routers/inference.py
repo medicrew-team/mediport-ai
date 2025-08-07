@@ -5,8 +5,11 @@ from server.services.prompt.builder import build_prompt
 from pydantic import BaseModel
 from googletrans import Translator
 
+import re
+
+
 # 라우터 객체 생성
-router = APIRouter()\
+router = APIRouter()
 
 # 구글 번역기 초기화
 translator = Translator()
@@ -137,7 +140,14 @@ async def protect_keywords_translate(result: str, medicine_name: str, ingredient
 
 # 모델이 생성한 응답에서 특정 문장 이후의 텍스트들을 잘라내는 역할을 하는 함수
 def truncate_after_final_sentence(text: str) -> str:
+
+    # Answer 패턴 처리 (대소문자 무시, 공백 제거)
+    answer_match = re.search(r'answer\s*:\s*(.*)', text, re.IGNORECASE | re.S)
+    if answer_match:
+        text = answer_match.group(1).strip()
+
     end_marker = "정확한 정보를 얻기 위해서는 의사나 약사와 상의하는 것이 중요합니다."
+
     idx = text.find(end_marker)
     if idx != -1:
         return text[:idx + len(end_marker)].strip()
