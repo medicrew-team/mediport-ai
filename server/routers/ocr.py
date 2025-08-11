@@ -26,7 +26,10 @@ async def ocr_image(file: UploadFile = File(...)):
         medicine_names = extract_medicine_names_from_text(raw_text)
 
         # 복약 정보 매핑
-        mapped_result = map_medicines_to_dosages(raw_text, words, medicine_names)
+        # mapped_result = map_medicines_to_dosages(raw_text, words, medicine_names)
+
+        # 복약 정보 매핑
+        mapped_result = map_medicines_to_dosages(words, medicine_names)
 
         # 추출한 텍스트를 전처리 하여 깔끔한 형태로 정리
         # cleaned_text = preprocess_text(raw_text)
