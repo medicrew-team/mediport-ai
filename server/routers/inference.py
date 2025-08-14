@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from server.services.inference.inference_selector import run_inference
 from server.services.vector_store.vector_search import search_similar_medicines
-from server.services.prompt.builder import build_prompt
+from server.services.llm.prompt.builder import build_prompt
 from pydantic import BaseModel
 from googletrans import Translator
+from server.services.llm.chains.lc_chain import answer_with_langchain
 
 import re
 
@@ -47,26 +48,32 @@ async def post_inference(request: InferenceRequest):
             user_input = translator.translate(user_input, dest="ko").text
 
         # 질문 기반으로 약 문서 유사도 검색
-        docs = search_similar_medicines(user_input, top_k=1)
+        # docs = search_similar_medicines(user_input, top_k=1)
 
-        if not docs:
+        # LangChain 기반 RAG 실행(현재 파이프라인을 Retriever/LLM으로 감싼 버전)
+        lc_out = answer_with_langchain(user_input)
+
+        # if not docs:
+        #     return {"result": "관련된 약 데이터 를 찾을 수 없습니다. 죄송합니다"}
+
+        if not lc_out:
             return {"result": "관련된 약 데이터 를 찾을 수 없습니다. 죄송합니다"}
 
         # 약명 추출
-        medicine_name = docs[0].get("제품명", "")
+        medicine_name = lc_out[0].get("제품명", "")
 
         # 성분명(들)을 추출
-        ingredient_name = docs[0].get("성분명", "")
+        ingredient_name = lc_out[0].get("성분명", "")
 
         # prompt 설계
-        prompt = build_prompt(user_input, docs[0])
+        # prompt = build_prompt(user_input, docs[0])
 
         # 검색된 문서를 LLM에게 질문과 함께 전달
         # 실행 환경에 따른 추론 서버(local) or 추론 로직(cloud)으로 연결
-        result = run_inference(prompt)
+        # result = run_inference(prompt)
 
         # 불필요한 추가 텍스트 제거 (후처리)
-        result = truncate_after_final_sentence(result)
+        result = truncate_after_final_sentence(lc_out["text"])
 
         # 약명 Placeholder 다시 원본으로 복원
         # replaced_result = result.replace("[MEDICINE_NAME]", medicine_name)
