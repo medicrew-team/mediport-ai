@@ -3,18 +3,15 @@ from server.services.inference.inference_selector import run_inference
 from server.services.vector_store.vector_search import search_similar_medicines
 from server.services.llm.prompt.builder import build_prompt
 from pydantic import BaseModel
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 from server.services.llm.chains.lc_chain import answer_with_langchain
 
 import re
+import anyio
 
 
 # 라우터 객체 생성
 router = APIRouter()
-
-# 구글 번역기 초기화
-translator = Translator()
-
 
 
 class InferenceRequest(BaseModel):
@@ -45,7 +42,7 @@ async def post_inference(request: InferenceRequest):
 
         # 비한글 입력이면 한국어로 먼저 번역해서 벡터 검색에 사용
         if target_lang != "ko":
-            user_input = translator.translate(user_input, dest="ko").text
+            user_input = await translate_async(user_input, source="auto", target="ko")
 
         # 질문 기반으로 약 문서 유사도 검색
         # docs = search_similar_medicines(user_input, top_k=1)
@@ -123,7 +120,7 @@ async def protect_keywords_translate(result: str, medicine_name: str, ingredient
 
 
     # 번역 수행
-    translated = translator.translate(protected_result, dest=target_lang).text
+    translated = await translate_async(protected_result, source="auto", target=target_lang)
 
     # 약명 복원 (대소문자 변형까지 고려)
     restored_result = (
@@ -159,3 +156,14 @@ def truncate_after_final_sentence(text: str) -> str:
     if idx != -1:
         return text[:idx + len(end_marker)].strip()
     return text.strip()  # 못 찾으면 원본 그대로
+
+
+
+async def translate_async(text: str, *, source: str = "auto", target: str = "ko") -> str:
+    """
+        동기 방식의 GoogleTranslator.translate() 호출을 별도의 스레드에서 실행하여,
+        FastAPI와 같은 비동기 환경에서도 이벤트 루프를 블로킹하지 않고 번역을 수행하는 함수.
+    """
+    return await anyio.to_thread.run_sync(
+        lambda: GoogleTranslator(source=source, target=target).translate(text)
+    )

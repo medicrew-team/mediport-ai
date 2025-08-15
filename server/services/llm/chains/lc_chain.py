@@ -6,6 +6,7 @@ from typing import Dict
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.documents import Document
+from typing import List, Dict, Any
 
 from server.services.retriever.lc_retriever import CurrentPipelineRetriever
 from server.services.llm.adapters.lc_llm_adapter import LocalInferenceLLM
@@ -34,6 +35,7 @@ def _make_prompt(inputs: Dict) -> str:
     if doc is None:
         # 검색 실패 시 LLM에게 넘길 최소한의 프롬프트(규칙에 맞춰 간단 처리)
         return f"질문: {question}\n\nAnswer:"
+
     # 기존 build_prompt(user_input, docs[0]) 형식을 그대로 따른다
     return build_prompt(question, doc.metadata)
 
@@ -58,3 +60,30 @@ def answer_with_langchain(question: str) -> Dict:
     prompt = _make_prompt({"question": question, "doc": docs[0]})
     text = llm.invoke(prompt)
     return {"text": text, "doc": docs[0].metadata}
+
+
+
+def run_pipeline(query: str, retriever, llm, return_docs: bool = False) -> Dict[str, Any]:
+    """Retriever + LLM(가짜 가능)을 주입받아 파이프라인 실행.
+    - retriever: BaseRetriever 호환 (FakeRetriever 포함)
+    - llm: invoke(prompt:str)->str 메서드 보유 (FakeLLM 포함)
+    """
+    docs: List[Document] = retriever.get_relevant_documents(query)
+    # 가장 관련도 높은 한 건만 써온 규칙 유지
+    context_doc = docs[0] if docs else Document(page_content="", metadata={})
+
+    # Document -> dict
+    record = context_doc.metadata if isinstance(context_doc, Document) else context_doc
+
+    prompt = build_prompt(query, record)     # 프롬프트 빌더
+    # answer = llm.invoke(prompt)            # 실제 LLM 호출 대신 FakeLLM이 응답
+
+    result = {"used_docs": len(docs)}
+    # if return_docs:
+    #     result["docs_preview"] = [d.page_content[:200] for d in docs]
+    #     result["prompt_preview"] = prompt[:400]
+
+    result["docs_meta"] = [d.metadata for d in docs]             # 전체 후보 메타
+    result["top_doc_meta"] = (docs[0].metadata if docs else {})  # 최상위 1건 메타
+
+    return result

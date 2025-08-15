@@ -18,6 +18,17 @@ def format_field(label: str, value: str) -> str:
     value = value.strip()
     return f"[{label}]\n{value}" if value else ""
 
+# 어떤 타입이 와도 안전하게 문자열로 변환
+def _to_text(x) -> str:
+    if x is None:
+        return ""
+    if isinstance(x, str):
+        return x.strip()
+    if isinstance(x, (list, tuple, set)):
+        parts = [str(v).strip() for v in x if str(v).strip()]
+        return ", ".join(parts)
+    return str(x).strip()
+
 
 def build_prompt(user_input: str, doc: dict) -> str:
     제품명 = doc.get("제품명", "").strip()
@@ -45,7 +56,13 @@ def build_prompt(user_input: str, doc: dict) -> str:
         ("기타 정보", f"- BIT: {doc.get('BIT', '')}".strip())
     ]
 
-    formatted_sections = [format_field(label, value) for label, value in fields if value.strip()]
+    # formatted_sections = [format_field(label, value) for label, value in fields if value.strip()]
+    formatted_sections = []
+    for label, value in fields:
+        s = _to_text(value)
+        if s:
+            formatted_sections.append(f"[{label}]\n{s}")
+
     section_text = "\n\n".join(formatted_sections)
 
     prompt = f"""
