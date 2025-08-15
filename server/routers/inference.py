@@ -20,6 +20,13 @@ class InferenceRequest(BaseModel):
     user_input: str
     lang: str = "ko"
 
+
+NO_CONTEXT_MSG = (
+    "질문과 관련된 일반 의약품 정보가 현재 보유 중인 약품 데이터베이스에 존재하지 않습니다 😭"
+    " 증상 키워드나 약 이름을 조금 더 구체적으로 알려주시면 다시 찾아볼게요!🥺"
+)
+
+
 # 사용자 입력을 받아 LLM 모델 추론 결과를 반환하는 API
 @router.post(
     "/inference",
@@ -52,12 +59,12 @@ async def post_inference(request: InferenceRequest):
         # LangChain 기반 RAG 실행
         lc_out = await asyncio.to_thread(answer_with_langchain, user_input)
 
+        if lc_out.get("doc") is not None:
+            # 약명 추출
+            medicine_name = lc_out["doc"].get("제품명", "")
 
-        # 약명 추출
-        medicine_name = lc_out[0].get("제품명", "")
-
-        # 성분명(들)을 추출
-        ingredient_name = lc_out[0].get("성분명", "")
+            # 성분명(들)을 추출
+            ingredient_name = lc_out["doc"].get("성분명", "")
 
         # prompt 설계
         # prompt = build_prompt(user_input, docs[0])
@@ -66,8 +73,11 @@ async def post_inference(request: InferenceRequest):
         # 실행 환경에 따른 추론 서버(local) or 추론 로직(cloud)으로 연결
         # result = run_inference(prompt)
 
-        # 불필요한 추가 텍스트 제거 (후처리)
-        result = truncate_after_final_sentence(lc_out["text"])
+        if lc_out["text"] == NO_CONTEXT_MSG:
+            # 불필요한 추가 텍스트 제거 (후처리)
+            result = truncate_after_final_sentence(lc_out["text"])
+        else:
+            result = lc_out["text"]
 
         # 약명 Placeholder 다시 원본으로 복원
         # replaced_result = result.replace("[MEDICINE_NAME]", medicine_name)
@@ -164,3 +174,4 @@ async def translate_async(text: str, *, source: str = "auto", target: str = "ko"
     return await anyio.to_thread.run_sync(
         lambda: GoogleTranslator(source=source, target=target).translate(text)
     )
+
