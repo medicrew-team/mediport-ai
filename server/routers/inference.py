@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, HTTPException
 from server.services.inference.inference_selector import run_inference
 from server.services.vector_store.vector_search import search_similar_medicines
@@ -47,8 +49,8 @@ async def post_inference(request: InferenceRequest):
         # 질문 기반으로 약 문서 유사도 검색
         # docs = search_similar_medicines(user_input, top_k=1)
 
-        # LangChain 기반 RAG 실행(현재 파이프라인을 Retriever/LLM으로 감싼 버전)
-        lc_out = answer_with_langchain(user_input)
+        # LangChain 기반 RAG 실행
+        lc_out = await asyncio.to_thread(answer_with_langchain, user_input)
 
 
         # 약명 추출

@@ -15,11 +15,20 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    # huggingface_token 파일 생성 (GitHub Secrets에서 받아옴)
+    # 캐시 사용 시 빌드 속도 향상
+    - name: Setup build cache
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+      
+
+      # huggingface_token 파일 생성 (GitHub Secrets에서 받아옴)
     - name: Create huggingface_token.txt file
       run: |
         mkdir -p secrets
-        echo "${{ secrets.HUGGINGFACE_TOKEN }}" > secrets/huggingface_token.txt
 
     # huggingface_token 디버깅용 (정상 저장 여부 확인)
     - name: Check huggingface_token.txt content
@@ -50,7 +59,7 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    #Docker 이미지 빌드 & 푸시
+    # Docker 이미지 빌드 & 푸시
     - name: Build and push Docker image
       uses: docker/build-push-action@v4
       with:
@@ -60,3 +69,11 @@ jobs:
         tags: |
           kdykdy1/mediport-ai-server:latest
           kdykdy1/mediport-ai-server:latest-${{ env.TAG_DATE }}-${{ env.TAG_HASH }}
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache-new
+
+    - name: Move build cache
+      if: success()
+      run: |
+        rm -rf /tmp/.buildx-cache
+        mv /tmp/.buildx-cache-new /tmp/.buildx-cache
