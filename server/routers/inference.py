@@ -50,11 +50,6 @@ async def post_inference(request: InferenceRequest):
         # LangChain 기반 RAG 실행(현재 파이프라인을 Retriever/LLM으로 감싼 버전)
         lc_out = answer_with_langchain(user_input)
 
-        # if not docs:
-        #     return {"result": "관련된 약 데이터 를 찾을 수 없습니다. 죄송합니다"}
-
-        if not lc_out:
-            return {"result": "관련된 약 데이터 를 찾을 수 없습니다. 죄송합니다"}
 
         # 약명 추출
         medicine_name = lc_out[0].get("제품명", "")
