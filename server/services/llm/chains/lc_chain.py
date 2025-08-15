@@ -45,6 +45,10 @@ rag_chain = (
     | StrOutputParser()                                                                     # 문자열로 변환
 )
 
+NO_CONTEXT_MSG = (
+    "질문과 관련된 일반 의약품 정보가 현재 보유 중인 약품 데이터베이스에 존재하지 않습니다 😭"
+    " 증상 키워드나 약 이름을 조금 더 구체적으로 알려주시면 다시 찾아볼게요!🥺"
+)
 
 def answer_with_langchain(question: str) -> Dict:
     """
@@ -52,21 +56,17 @@ def answer_with_langchain(question: str) -> Dict:
     """
     docs = retriever.get_relevant_documents(question)
     if not docs:
-        return {"text": "", "doc": None}
+        return {"text": NO_CONTEXT_MSG, "doc": {}}
 
     prompt = _make_prompt({"question": question, "doc": docs[0]})
     text = llm.invoke(prompt)
     return {"text": text, "doc": docs[0].metadata}
 
 
-NO_CONTEXT_MSG = (
-    "질문과 관련된 일반 의약품 정보가 현재 보유 중인 약품 데이터베이스에 존재하지 않습니다 😭"
-    " 증상 키워드나 약 이름을 조금 더 구체적으로 알려주시면 다시 찾아볼게요!🥺"
-)
 
-def run_pipeline(query: str, retriever, llm, return_docs: bool = False) -> Dict[str, Any]:
+def run_pipeline_for_test(query: str, retriever, llm, return_docs: bool = False) -> Dict[str, Any]:
     """
-    LangChain 기반 RAG 파이프라인 (테스트/프로덕션 공용 엔트리포인트).
+    LangChain 기반 RAG 파이프라인 (테스트 엔트리포인트).
     """
 
     docs: List[Document] = retriever.get_relevant_documents(query)
@@ -84,7 +84,7 @@ def run_pipeline(query: str, retriever, llm, return_docs: bool = False) -> Dict[
         prompt = build_prompt(query, record)     # 프롬프트 빌더
 
 
-    # LLM 호출
+    # 가짜 LLM 호출
     answer = llm.invoke(prompt)
 
     result = {"used_docs": len(docs)}

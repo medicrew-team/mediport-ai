@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 set -euo pipefail
 
 # -------------------------
@@ -7,6 +6,12 @@ set -euo pipefail
 export MAMBA_ROOT_PREFIX="${MAMBA_ROOT_PREFIX:-/opt/micromamba}"
 export PATH="${MAMBA_ROOT_PREFIX}/envs/py312/bin:${MAMBA_ROOT_PREFIX}/bin:${PATH}"
 PY_BIN="${PY_BIN:-${MAMBA_ROOT_PREFIX}/envs/py312/bin/python}"
+
+# HF/Transformers 캐시를 퍼시스턴트 볼륨(/workspace)로 고정
+export TRANSFORMERS_CACHE=/workspace/cache
+export HF_HOME=/workspace/cache
+mkdir -p "$TRANSFORMERS_CACHE"
+
 
 echo "[start] Python: $("$PY_BIN" -V 2>&1)"
 
@@ -31,8 +36,8 @@ fi
 : "${LLM_MODEL_REPO:=MLP-KTLim/llama-3-Korean-Bllossom-8B-gguf-Q4_K_M}"
 : "${LLM_INCLUDE_PATTERN:=*.gguf}"
 
-# 앱 프로세스가 보게 환경변수로 내보내기
-export LLM_GGUF_PATH LLM_MODEL_REPO LLM_INCLUDE_PATTERN LLM_N_GPU_LAYERS LLM_CTX
+# uvicorn 등 하위 프로세스가 보도록 export
+export LLM_GGUF_PATH LLM_MODEL_REPO LLM_INCLUDE_PATTERN LLM_N_GPU_LAYERS
 
 MODEL_DIR="$(dirname "$LLM_GGUF_PATH")"
 mkdir -p "$MODEL_DIR"
@@ -95,6 +100,12 @@ else
   echo "[start] 모델 존재: $LLM_GGUF_PATH"
 fi
 
+# -------------------------
+# data 디렉토리 영구 볼륨으로 연결
+# -------------------------
+mkdir -p /workspace/data
+ln -sfn /workspace/data /app/data
+echo "[start] data dir -> /workspace/data (symlink)"
 
 
 # ===== FAISS 벡터 DB 준비 =====\
