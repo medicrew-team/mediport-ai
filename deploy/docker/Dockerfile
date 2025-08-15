@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # micromamba 설치 (파이썬 3.12 환경 구성)
 ENV MAMBA_ROOT_PREFIX=/opt/micromamba
-RUN curl -L https://micro.mamba.pm/api/micromamba/linux-64/latest | bash -s -- -b -p $MAMBA_ROOT_PREFIX
+RUN curl -L https://micro.mamba.pm/install.sh | bash -s -- -b -p $MAMBA_ROOT_PREFIX
 SHELL ["/bin/bash", "-lc"]
 
 
