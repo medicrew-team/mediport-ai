@@ -1,52 +1,46 @@
 # CUDA 베이스 + Ubuntu 22.04
 FROM nvidia/cuda:12.1.1-devel-ubuntu22.04
 
-# 기본 도구
+# 기본 도구 + micromamba 추출에 필요한 bzip2
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl ca-certificates bash git build-essential cmake \
-    && rm -rf /var/lib/apt/lists/*
+    bash curl ca-certificates git build-essential cmake bzip2 \
+ && rm -rf /var/lib/apt/lists/*
 
+# ── micromamba 단일 바이너리 설치 → /usr/local/bin
+RUN curl -L https://micro.mamba.pm/api/micromamba/linux-64/latest \
+  | tar -xvj -O bin/micromamba > /usr/local/bin/micromamba \
+ && chmod +x /usr/local/bin/micromamba
 
-# micromamba 설치 (파이썬 3.12 환경 구성)
+# micromamba 루트(환경 저장 경로)
 ENV MAMBA_ROOT_PREFIX=/opt/micromamba
-RUN curl -L https://micro.mamba.pm/install.sh | bash -s -- -b -p $MAMBA_ROOT_PREFIX
 
-RUN /opt/micromamba/bin/micromamba --help >/dev/null
-# 절대경로로 micromamba 호출
-RUN /opt/micromamba/bin/micromamba create -y -n py312 -c conda-forge python=3.12 pip && \
-    /opt/micromamba/bin/micromamba clean -a -y \
+# Python 3.12 환경 생성(+ pip)  ※ 절대경로 호출로 PATH 이슈 회피
+RUN /usr/local/bin/micromamba create -y -n py312 -c conda-forge python=3.12 pip \
+ && /usr/local/bin/micromamba clean -a -y
 
-# micromamba 바이너리 경로 추가
-ENV PATH=$MAMBA_ROOT_PREFIX/envs/py312/bin:$MAMBA_ROOT_PREFIX/bin:$PATH
+# 새 env를 기본 PATH로
+ENV PATH=$MAMBA_ROOT_PREFIX/envs/py312/bin:$PATH
 ENV CONDA_DEFAULT_ENV=py312
 SHELL ["/bin/bash", "-lc"]
 
-
-# Python 3.12 환경 생성
-RUN /opt/micromamba/bin/micromamba create -y -n py312 -c conda-forge python=3.12 pip && \
-    /opt/micromamba/bin/micromamba clean -a -y \
-
-
 WORKDIR /app
 
-#설치
+# 프로젝트 요구사항(기존 requirements.txt 그대로 사용)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# GPU 의존 패키지만 Docker 빌드 레이어에서 덮어씌움
-# llama-cpp-python: CUDA 빌드로 재설치
+# GPU 의존 패키지 덮어쓰기: llama-cpp-python(CUDA 빌드)
 RUN (pip uninstall -y llama-cpp-python || true) && \
     CMAKE_ARGS="-DLLAMA_CUBLAS=on" FORCE_CMAKE=1 \
     pip install --no-cache-dir --no-binary :all: llama-cpp-python
 
-
-# 배포에 필요한 코드 복사
+# 코드 복사
 COPY server/ ./server
 COPY deploy/start.sh ./start.sh
 COPY data/ ./data
 COPY secrets/ ./secrets
 
-# 모델 관련 기본 ENV
+# 모델 관련 ENV (RunPod에서 오버라이드 가능)
 RUN mkdir -p /app/model
 ENV LLM_GGUF_PATH=/app/model/llama-3-Korean-Bllossom-8B-Q4_K_M.gguf \
     LLM_CTX=2048 \
