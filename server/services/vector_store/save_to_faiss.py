@@ -4,8 +4,8 @@ import faiss
 from sentence_transformers import SentenceTransformer
 from server.config import BASE_DIR
 
-os.environ.setdefault("HF_HOME", "/workspace/cache")
-os.environ.setdefault("TRANSFORMERS_CACHE", "/workspace/cache")
+os.environ.setdefault("HF_HOME", os.path.join(BASE_DIR, "cache"))
+os.environ.setdefault("TRANSFORMERS_CACHE", os.path.join(BASE_DIR, "cache"))
 
 EMBEDDING_MODEL_NAME = "jhgan/ko-sroberta-multitask"                        # 임베딩 모델
 # EMBEDDING_MODEL_NAME = "snunlp/KR-SBERT-V40K-klueNLI-augSTS"              # 임베딩 모델
