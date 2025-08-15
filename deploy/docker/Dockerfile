@@ -10,16 +10,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # micromamba 설치 (파이썬 3.12 환경 구성)
 ENV MAMBA_ROOT_PREFIX=/opt/micromamba
 RUN curl -L https://micro.mamba.pm/install.sh | bash -s -- -b -p $MAMBA_ROOT_PREFIX
+
+RUN /opt/micromamba/bin/micromamba --help >/dev/null
+# 절대경로로 micromamba 호출
+RUN /opt/micromamba/bin/micromamba create -y -n py312 -c conda-forge python=3.12 pip && \
+    /opt/micromamba/bin/micromamba clean -a -y \
+
 # micromamba 바이너리 경로 추가
-ENV PATH=$MAMBA_ROOT_PREFIX/bin:$PATH
+ENV PATH=$MAMBA_ROOT_PREFIX/envs/py312/bin:$MAMBA_ROOT_PREFIX/bin:$PATH
+ENV CONDA_DEFAULT_ENV=py312
 SHELL ["/bin/bash", "-lc"]
 
 
 # Python 3.12 환경 생성
-RUN micromamba create -y -n py312 -c conda-forge python=3.12 pip && micromamba clean -a -y
-# 새 환경을 기본 PATH로
-ENV PATH=$MAMBA_ROOT_PREFIX/envs/py312/bin:$PATH
-ENV CONDA_DEFAULT_ENV=py312
+RUN /opt/micromamba/bin/micromamba create -y -n py312 -c conda-forge python=3.12 pip && \
+    /opt/micromamba/bin/micromamba clean -a -y \
+
 
 WORKDIR /app
 
