@@ -29,10 +29,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# GPU 의존 패키지 덮어쓰기: llama-cpp-python(CUDA 빌드)
-RUN (pip uninstall -y llama-cpp-python || true) && \
-    CMAKE_ARGS="-DLLAMA_CUBLAS=on" FORCE_CMAKE=1 \
-    pip install --no-cache-dir --no-binary :all: llama-cpp-python
+# GPU 의존 패키지: llama-cpp-python (CUDA 12.1 wheel 사용)
+RUN pip install -U pip
+RUN pip install --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121 \
+    llama-cpp-python
 
 # 코드 복사
 COPY server/ ./server
