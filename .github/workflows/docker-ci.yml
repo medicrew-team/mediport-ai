@@ -25,15 +25,6 @@ jobs:
           ${{ runner.os }}-buildx-
       
 
-      # huggingface_token 파일 생성 (GitHub Secrets에서 받아옴)
-    - name: Create huggingface_token.txt file
-      run: |
-        mkdir -p secrets
-
-    # huggingface_token 디버깅용 (정상 저장 여부 확인)
-    - name: Check huggingface_token.txt content
-      run: cat secrets/huggingface_token.txt
-
 
     # vision-api-key 파일 생성 (GitHub Secrets에서 받아옴)
     - name: Create vision-api-key.json file
