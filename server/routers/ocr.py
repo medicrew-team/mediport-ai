@@ -10,6 +10,23 @@ router = APIRouter()
 
 # 사용자가 업로드한 이미지에서 약명 및 복약정를 추출하여 반환하는 API
 @router.post("/ocr/korean-medicine",
+    responses={
+            200: {
+                "description": "Successful Response",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "raw_text": "전체 추출 텍스트",
+                            "medicine_names": ["엔클로페낙정", "애티렌정"],
+                            "mapped_result": {
+                                "엔클로페낙정": {"투약량": "1", "횟수": "2", "일수": "5"},
+                                "애티렌정": {"투약량": "1", "횟수": "2", "일수": "5"}
+                            }
+                        }
+                    }
+                },
+            }
+        },
     summary="OCR Korean Medicine",
     description="이미지를 업로드하면 OCR을 통해 국내 약명 및 복약 정보를 추출합니다."
 )
@@ -51,6 +68,19 @@ async def ocr_image(file: UploadFile = File(...)):
 # 모국 약명 추출
 @router.post(
     "/ocr/foreign-medicine",
+    responses={
+                200: {
+                    "description": "Successful Response",
+                    "content": {
+                        "application/json": {
+                            "example": {
+                                "raw_text": "전체 추출 텍스트",
+                                "foreign_medicine_names": ["Decolgen", "Panadol"]
+                                }
+                            }
+                        }
+                    },
+                },
     summary="OCR Foreign Medicine",
     description="이미지를 업로드하면 OCR을 통해 모국 약명을 추출합니다."
 )
