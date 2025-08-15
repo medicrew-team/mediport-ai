@@ -1,19 +1,19 @@
+import asyncio
+
 from fastapi import APIRouter, HTTPException
 from server.services.inference.inference_selector import run_inference
 from server.services.vector_store.vector_search import search_similar_medicines
-from server.services.prompt.builder import build_prompt
+from server.services.llm.prompt.builder import build_prompt
 from pydantic import BaseModel
-from googletrans import Translator
+from deep_translator import GoogleTranslator
+from server.services.llm.chains.lc_chain import answer_with_langchain
 
 import re
+import anyio
 
 
 # 라우터 객체 생성
 router = APIRouter()
-
-# 구글 번역기 초기화
-translator = Translator()
-
 
 
 class InferenceRequest(BaseModel):
@@ -44,29 +44,30 @@ async def post_inference(request: InferenceRequest):
 
         # 비한글 입력이면 한국어로 먼저 번역해서 벡터 검색에 사용
         if target_lang != "ko":
-            user_input = translator.translate(user_input, dest="ko").text
+            user_input = await translate_async(user_input, source="auto", target="ko")
 
         # 질문 기반으로 약 문서 유사도 검색
-        docs = search_similar_medicines(user_input, top_k=1)
+        # docs = search_similar_medicines(user_input, top_k=1)
 
-        if not docs:
-            return {"result": "관련된 약 데이터 를 찾을 수 없습니다. 죄송합니다"}
+        # LangChain 기반 RAG 실행
+        lc_out = await asyncio.to_thread(answer_with_langchain, user_input)
+
 
         # 약명 추출
-        medicine_name = docs[0].get("제품명", "")
+        medicine_name = lc_out[0].get("제품명", "")
 
         # 성분명(들)을 추출
-        ingredient_name = docs[0].get("성분명", "")
+        ingredient_name = lc_out[0].get("성분명", "")
 
         # prompt 설계
-        prompt = build_prompt(user_input, docs[0])
+        # prompt = build_prompt(user_input, docs[0])
 
         # 검색된 문서를 LLM에게 질문과 함께 전달
         # 실행 환경에 따른 추론 서버(local) or 추론 로직(cloud)으로 연결
-        result = run_inference(prompt)
+        # result = run_inference(prompt)
 
         # 불필요한 추가 텍스트 제거 (후처리)
-        result = truncate_after_final_sentence(result)
+        result = truncate_after_final_sentence(lc_out["text"])
 
         # 약명 Placeholder 다시 원본으로 복원
         # replaced_result = result.replace("[MEDICINE_NAME]", medicine_name)
@@ -116,7 +117,7 @@ async def protect_keywords_translate(result: str, medicine_name: str, ingredient
 
 
     # 번역 수행
-    translated = translator.translate(protected_result, dest=target_lang).text
+    translated = await translate_async(protected_result, source="auto", target=target_lang)
 
     # 약명 복원 (대소문자 변형까지 고려)
     restored_result = (
@@ -152,3 +153,14 @@ def truncate_after_final_sentence(text: str) -> str:
     if idx != -1:
         return text[:idx + len(end_marker)].strip()
     return text.strip()  # 못 찾으면 원본 그대로
+
+
+
+async def translate_async(text: str, *, source: str = "auto", target: str = "ko") -> str:
+    """
+        동기 방식의 GoogleTranslator.translate() 호출을 별도의 스레드에서 실행하여,
+        FastAPI와 같은 비동기 환경에서도 이벤트 루프를 블로킹하지 않고 번역을 수행하는 함수.
+    """
+    return await anyio.to_thread.run_sync(
+        lambda: GoogleTranslator(source=source, target=target).translate(text)
+    )

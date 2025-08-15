@@ -1,12 +1,35 @@
-# Python 3.12.5 이미지 기반
-FROM python:3.12.5
+# CUDA 베이스 + Ubuntu 22.04
+FROM nvidia/cuda:12.1.1-devel-ubuntu22.04
 
-# 작업 디렉토리 설정
+# 기본 도구
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl ca-certificates bash git build-essential cmake \
+    && rm -rf /var/lib/apt/lists/*
+
+
+# micromamba 설치 (파이썬 3.12 환경 구성)
+ENV MAMBA_ROOT_PREFIX=/opt/micromamba
+RUN curl -L https://micro.mamba.pm/api/micromamba/linux-64/latest | bash -s -- -b -p $MAMBA_ROOT_PREFIX
+SHELL ["/bin/bash", "-lc"]
+
+
+# Python 3.12 생성 및 활성화
+RUN micromamba create -y -n py312 python=3.12 && micromamba clean -a -y
+ENV PATH=$MAMBA_ROOT_PREFIX/envs/py312/bin:$PATH
+ENV CONDA_DEFAULT_ENV=py312
+
 WORKDIR /app
 
-# 의존성 설치
+#설치
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# GPU 의존 패키지만 Docker 빌드 레이어에서 덮어씌움
+# llama-cpp-python: CUDA 빌드로 재설치
+RUN (pip uninstall -y llama-cpp-python || true) && \
+    CMAKE_ARGS="-DLLAMA_CUBLAS=on" FORCE_CMAKE=1 \
+    pip install --no-cache-dir --no-binary :all: llama-cpp-python
+
 
 # 배포에 필요한 코드 복사
 COPY server/ ./server
@@ -14,11 +37,12 @@ COPY deploy/start.sh ./start.sh
 COPY data/ ./data
 COPY secrets/ ./secrets
 
-# 포트 개방 (FastAPI 기본 포트)
+# 모델 관련 기본 ENV
+RUN mkdir -p /app/model
+ENV LLM_GGUF_PATH=/app/model/llama-3-Korean-Bllossom-8B-Q4_K_M.gguf \
+    LLM_CTX=2048 \
+    LLM_N_GPU_LAYERS=40
+
 EXPOSE 8000
-
-# 이미지 빌드(docker build)할 때 실행됨(start.sh 파일에 실행 권한 부여)
 RUN chmod +x start.sh
-
-# 컨테이너 실행 시 실행됨 (docker run)
 CMD ["./start.sh"]
