@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from server.services.retriever.fake_retriever import FakeRetriever
 from server.services.llm.adapters.fake_llm import FakeLLM
-from server.services.llm.chains.lc_chain import run_pipeline
+from server.services.llm.chains.lc_chain import run_pipeline_for_test
 
 
 router = APIRouter()
@@ -24,6 +24,6 @@ class InferenceRequest(BaseModel):
 async def pipeline_test_fake(request: InferenceRequest):
     retriever = FakeRetriever(top_k=request.top_k or 1)
     fake_llm = FakeLLM(mode="echo")
-    out = run_pipeline(request.user_input, retriever, fake_llm, return_docs=request.return_docs)
+    out = run_pipeline_for_test(request.user_input, retriever, fake_llm, return_docs=request.return_docs)
 
     return out
