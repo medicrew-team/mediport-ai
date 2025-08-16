@@ -47,5 +47,5 @@ ENV LLM_GGUF_PATH=/app/model/llama-3-Korean-Bllossom-8B-Q4_K_M.gguf \
     LLM_N_GPU_LAYERS=40
 
 EXPOSE 8000
-RUN chmod +x start.sh
+RUN chmod +x start_runpod.sh
 CMD ["./start.sh"]
