@@ -1,4 +1,8 @@
 import asyncio
+import os
+import re
+import anyio
+
 
 from fastapi import APIRouter, HTTPException
 from server.services.inference.inference_selector import run_inference
@@ -7,13 +11,17 @@ from server.services.llm.prompt.builder import build_prompt
 from pydantic import BaseModel
 from deep_translator import GoogleTranslator
 from server.services.llm.chains.lc_chain import answer_with_langchain
+from openai import OpenAI
+from server.services.llm.chains.lc_chain_gpt import answer_with_langchain_gpt
+from server.config import OPENAI_API_KEY
 
-import re
-import anyio
 
 
 # 라우터 객체 생성
 router = APIRouter()
+
+# OpenAI 객체 생성
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 
 class InferenceRequest(BaseModel):
@@ -27,17 +35,30 @@ NO_CONTEXT_MSG = (
 )
 
 
-# 사용자 입력을 받아 LLM 모델 추론 결과를 반환하는 API
+# --- 로컬 모델(llama) 기반 추론 엔드포인트 ---
 @router.post(
-    "/inference",
-    summary="증상 기반 일반의약품 추천 챗봇",
+    "/inference-v1",
+    responses={
+            200: {
+                "description": "Successful Response",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "result": "머리가 아프시군요! 😟 그런 증상에는 판콜에이내복액이 도움이 될 수 있어요...(생략)"
+                        }
+                    }
+                },
+            }
+              },
+    summary="증상 기반 일반의약품 추천 챗봇(llama-3) ",
     description="""
         사용자의 증상 설명을 기반으로 일반의약품을 추천해주는 챗봇입니다.  
-        'lang' 필드를 통해 번역 언어를 설정할 수 있습니다.  
+        'lang' 필드를 통해 번역 언어를 설정할 수 있습니다.(※ GPU Cloud 환경에서만 동작 가능하고 
+        AWS 환경에선 동작 불가능 ※)\n  
         지원 언어:
         - `en` (영어)
         - `vi` (베트남어)
-        - `th` (태국어)
+        - `th` (태국어)ㄴ
         - `fil` (필리핀어)
         - `zh-cn` (중국어 간체)
         - `ko` (한국어, 기본값)
@@ -91,6 +112,81 @@ async def post_inference(request: InferenceRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# --- OpenAI 기반 추론 엔드포인트 ---
+@router.post(
+    "/inference-v2",
+    summary="증상 기반 일반의약품 추천 챗봇 (openai)",
+    responses={
+            200: {
+                "description": "Successful Response",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "result": "머리가 아프시군요! 😟 그런 증상에는 판콜에이내복액이 도움이 될 수 있어요...(생략)"
+                        }
+                    }
+                },
+            }
+    },
+    description="""
+        기존 추론 버전과 기능은 동일하되, 로컬 모델 대신 OpenAI를 사용합니다.
+        'lang' 필드로 번역 언어를 설정할 수 있습니다.\n
+        지원 언어:
+        - `en` (영어)
+        - `vi` (베트남어)
+        - `th` (태국어)
+        - `fil` (필리핀어)
+        - `zh-cn` (중국어 간체)
+        - `ko` (한국어, 기본값)
+    """
+)
+async def post_inference_v2(request: InferenceRequest):
+    try:
+        user_input = request.user_input
+        target_lang = request.lang.lower()
+
+        # 벡터 검색 기준 언어는 한국어이므로, 비한글 입력은 먼저 한국어로 번역
+        if target_lang != "ko":
+            user_input_for_search = await translate_async(user_input, source="auto", target="ko")
+        else:
+            user_input_for_search = user_input
+
+        # LangChain(GPT) 기반 RAG 실행 (체인 내부에서 retriever + prompt + LLM 모두 처리)
+        lc_out = await asyncio.to_thread(answer_with_langchain_gpt, user_input_for_search)
+
+        text_obj = (lc_out or {}).get("text", "")
+        text = getattr(text_obj, "content", text_obj) or ""
+        doc_meta = (lc_out or {}).get("doc") or {}
+
+        # 약명/성분명 추출 (번역 보호용)
+        medicine_name = doc_meta.get("제품명", "") if isinstance(doc_meta, dict) else ""
+        ingredient_name = doc_meta.get("성분명", "") if isinstance(doc_meta, dict) else ""
+
+        # 결과 보정
+        if not text.strip():
+            text = NO_CONTEXT_MSG
+
+        # NO_CONTEXT_MSG일 때는 후처리(truncate) 적용하지 않음
+        if text != NO_CONTEXT_MSG:
+            text = truncate_after_final_sentence(text)
+
+        # 번역 처리
+        if target_lang != "ko":
+            if text == NO_CONTEXT_MSG:
+                # 안내 문구는 키워드 보호 불필요
+                text = await translate_async(text, source="auto", target=target_lang)
+            else:
+                # 약명/성분명 보호 번역
+                text = await protect_keywords_translate(text, medicine_name, ingredient_name, target_lang)
+
+        return {"result": text}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 
