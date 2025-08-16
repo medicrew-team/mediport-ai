@@ -36,7 +36,7 @@ RUN pip install --extra-index-url https://abetlen.github.io/llama-cpp-python/whl
 
 # 코드 복사
 COPY server/ ./server
-COPY deploy/start.sh ./start.sh
+COPY deploy/runpod/start_runpod.sh ./start_runpod.sh
 COPY data/ ./data
 COPY secrets/ ./secrets
 
@@ -48,4 +48,4 @@ ENV LLM_GGUF_PATH=/app/model/llama-3-Korean-Bllossom-8B-Q4_K_M.gguf \
 
 EXPOSE 8000
 RUN chmod +x start_runpod.sh
-CMD ["./start.sh"]
+CMD ["./start_runpod.sh"]
