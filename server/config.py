@@ -33,3 +33,12 @@ if env_mode == "local":
 # 공통 환경 변수
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # 프로젝트 루트 경로를 전역으로 설정
+OPENAI_API_KEY_PATH = os.getenv("OPENAI_API_KEY_PATH")
+
+def _load_openai_key_from_path(path: str) -> str:
+    if not path or not os.path.exists(path):
+        raise RuntimeError("OPENAI_API_KEY_PATH invalid.")
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+OPENAI_API_KEY = _load_openai_key_from_path(OPENAI_API_KEY_PATH)
