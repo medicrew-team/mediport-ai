@@ -31,21 +31,26 @@ def load_foreign_medicine_names() -> list:
 def extract_medicine_names_from_text(text: str) -> list:
 
     medicine_names = load_medicine_names()
+
+    if not text:
+        return []
+
     extracted = []
 
     for name in medicine_names:
 
-        for name in medicine_names:
-            # 공백/개행 허용 + 단어 경계 보장 패턴으로 '모든 등장' 탐색
-            pattern = _token_pattern(name)
-            matches = list(pattern.finditer(text or ""))
+        if name == '엔클로페낙정':
+            print(name)
+        # 빠른 필터: 공백 허용 + 단어 경계 만족하는지 체크
+        if not _contains_token_allowing_spaces(text, name):
+            continue
 
-            if matches:
-                # 중복된 약명을 모두 넣어서, 복약 정보 매핑 단계에서 줄별로 모두 복약 정보 추출을 시도할 수 있게 함
-                extracted.extend([name] * len(matches))
+        # 정규식 기반 등장 횟수 수집
+        pattern = _token_pattern(name)
+        matches = list(pattern.finditer(text or ""))
 
-        if _contains_token_allowing_spaces(text, name):
-            extracted.append(name)
+        if matches:
+            extracted.extend([name] * len(matches))
 
     return extracted
 
@@ -54,6 +59,9 @@ def extract_medicine_names_from_text(text: str) -> list:
 def extract_foreign_medicine_names_from_text(text: str) -> list:
 
     foreign_names = load_foreign_medicine_names()
+
+    if not text:
+        return []
 
     text_norm = text.lower().replace(" ", "")
 
@@ -64,13 +72,7 @@ def extract_foreign_medicine_names_from_text(text: str) -> list:
         if _contains_token_allowing_spaces(text_norm, name_norm):
             extracted.append(name)
 
-    # 중복 제거 (순서 유지)
-    unique_extracted = []
-    for n in extracted:
-        if n not in unique_extracted:
-            unique_extracted.append(n)
-
-    return unique_extracted
+    return extracted
 
 
 
