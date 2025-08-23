@@ -58,9 +58,9 @@ NO_CONTEXT_MSG = (
         지원 언어:
         - `en` (영어)
         - `vi` (베트남어)
-        - `th` (태국어)ㄴ
-        - `fil` (필리핀어)
-        - `zh-cn` (중국어 간체)
+        - `th` (태국어)
+        - `tl` (필리핀어)
+        - `zh-CN` (중국어 간체)
         - `ko` (한국어, 기본값)
     """
 )
@@ -68,7 +68,7 @@ async def post_inference(request: InferenceRequest):
 
     try:
         user_input = request.user_input
-        target_lang = request.lang.lower()
+        target_lang = request.lang
 
         # 비한글 입력이면 한국어로 먼저 번역해서 벡터 검색에 사용
         if target_lang != "ko":
@@ -138,15 +138,15 @@ async def post_inference(request: InferenceRequest):
         - `en` (영어)
         - `vi` (베트남어)
         - `th` (태국어)
-        - `fil` (필리핀어)
-        - `zh-cn` (중국어 간체)
+        - `tl` (필리핀어)
+        - `zh-CN` (중국어 간체)
         - `ko` (한국어, 기본값)
     """
 )
 async def post_inference_v2(request: InferenceRequest):
     try:
         user_input = request.user_input
-        target_lang = request.lang.lower()
+        target_lang = request.lang
 
         # 벡터 검색 기준 언어는 한국어이므로, 비한글 입력은 먼저 한국어로 번역
         if target_lang != "ko":
