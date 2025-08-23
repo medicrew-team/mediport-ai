@@ -39,8 +39,6 @@ def extract_medicine_names_from_text(text: str) -> list:
 
     for name in medicine_names:
 
-        if name == '엔클로페낙정':
-            print(name)
         # 빠른 필터: 공백 허용 + 단어 경계 만족하는지 체크
         if not _contains_token_allowing_spaces(text, name):
             continue
