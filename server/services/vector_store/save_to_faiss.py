@@ -9,6 +9,11 @@ os.environ.setdefault("TRANSFORMERS_CACHE", os.path.join(BASE_DIR, "cache"))
 
 EMBEDDING_MODEL_NAME = "jhgan/ko-sroberta-multitask"                        # 임베딩 모델
 # EMBEDDING_MODEL_NAME = "snunlp/KR-SBERT-V40K-klueNLI-augSTS"              # 임베딩 모델
+# EMBEDDING_MODEL_NAME = "BM-K/KoSimCSE-roberta-multitask"                  # 임베딩 모델
+# EMBEDDING_MODEL_NAME = "nlpai-lab/KURE-v1"                                # 임베딩 모델
+# EMBEDDING_MODEL_NAME = "nlpai-lab/KoE5"                                   # 임베딩 모델
+# EMBEDDING_MODEL_NAME = "intfloat/multilingual-e5-large-instruct"          # 임베딩 모델
+
 DATASET_PATH = os.path.join(BASE_DIR, "data/medicine_dataset.json")         # 증상 기반 일반 의약품 추천 데이터셋 (JSON 파일 경로)
 FAISS_INDEX_PATH = os.path.join(BASE_DIR, "data/medicine_faiss.index")      # FAISS 인덱스 파일 경로
 METADATA_JSON_PATH = os.path.join(BASE_DIR, "data/medicine_metadata.json")  # 메타데이터 JSON 경로
@@ -51,21 +56,21 @@ def save_dataset_to_faiss(dataset: list[dict]):
 def build_text_for_embedding(item: dict) -> str:
 
     # 필수 필드 체크 (주의사항은 build_warning_text()에서 체크)
-    required_fields = ['제품명', '성분명', 'ICD', '복용법']
+    required_fields = ['제품명', '성분명', 'ICD', '복용법', 'ICD_요약']
 
     for field in required_fields:
         if not item.get(field):
             raise ValueError(f"필수 항목 누락: '{field}' 값이 없습니다.")
 
     # 각 증상 문자열 뒤에 " 증상" 이라는 단어를 붙임
-    icd_sentences = ', '.join([f"{s.strip()} 증상" for s in item.get('ICD', '').split(',')])
+    # icd_sentences = ', '.join([f"{s.strip()} 증상" for s in item.get('ICD', '').split(',')])
 
     return (
         # f"이 약은 {item.get('제품명', '')}입니다. "
         # f"{item.get('성분명', '')}이라는 성분을 포함하고 있으며, "
-        f"{item.get('제품명')} 약품은 {icd_sentences} 에 사용하거나 복용할 수 있습니다. "
+        f"{item.get('제품명')}은(는) {item.get('ICD_요약')}"
         # f"복용법 또는 사용법은 다음과 같다: {item.get('복용법', '')}. "
-        f"{build_warning_text(item)}"
+        # f"{build_warning_text(item)}"
     )
 
 

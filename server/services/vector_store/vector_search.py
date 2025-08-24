@@ -13,6 +13,12 @@ from rank_bm25 import BM25Okapi
 
 EMBEDDING_MODEL_NAME = "jhgan/ko-sroberta-multitask"                        # 임베딩 모델
 # EMBEDDING_MODEL_NAME = "snunlp/KR-SBERT-V40K-klueNLI-augSTS"              # 임베딩 모델
+# EMBEDDING_MODEL_NAME = "BM-K/KoSimCSE-roberta-multitask"                  # 임베딩 모델
+# EMBEDDING_MODEL_NAME = "nlpai-lab/KURE-v1"                                # 임베딩 모델
+# EMBEDDING_MODEL_NAME = "nlpai-lab/KoE5"                                   # 임베딩 모델
+# EMBEDDING_MODEL_NAME = "intfloat/multilingual-e5-large-instruct"          # 임베딩 모델
+
+
 FAISS_INDEX_PATH = os.path.join(BASE_DIR, "data/medicine_faiss.index")      # FAISS 인덱스 파일 경로
 METADATA_JSON_PATH = os.path.join(BASE_DIR, "data/medicine_metadata.json")  # 메타데이터 JSON 경로
 
@@ -60,9 +66,15 @@ def _clean_icd_string(icd: str) -> str:
 
 
 def _icd_terms(meta: Dict[str, Any]) -> List[str]:
-    """ICD를 개별 용어 리스트로 반환(‘증상’ 제거)."""
-    icd = meta.get("ICD", "") or ""
-    return [t for t in (s.replace("증상", "").strip() for s in icd.split(",")) if t]
+    """ICD + ICD_요약을 개별 토큰 리스트로 반환."""
+    terms = []
+    # if meta.get("ICD"):
+    #     icd = meta.get("ICD", "") or ""
+    #     terms.extend([t for t in (s.replace("증상", "").strip() for s in icd.split(",")) if t])
+    if meta.get("ICD_요약"):
+        terms.extend(_tok(meta["ICD_요약"]))  # 문장 토큰 단위로 확장
+
+    return terms
 
 
 def _rrf(rank: int) -> float:
@@ -77,6 +89,20 @@ def _l2_to_cos(l2_dist: float) -> float:
     return 1.0 - (l2_dist / 2.0)
 
 
+def _icd_summary(meta: Dict[str, Any]) -> str:
+    return (meta.get("ICD_요약") or "").strip()
+
+def _icd_text(meta: Dict[str, Any]) -> str:
+    s = _icd_summary(meta)
+    if s:
+        return s
+    # 요약이 없을 때만 기존 ICD 키워드 사용
+    return _clean_icd_string(meta.get("ICD", "") or "")
+
+def _icd_any_overlap(meta: Dict[str, Any], q_tokens: List[str]) -> bool:
+    """질의 토큰과 해당 약의 ICD(요약/키워드) 토큰이 하나라도 겹치면 True."""
+    icd_tokens = set(_tok(_icd_text(meta)))
+    return bool(icd_tokens & set(q_tokens))
 
 
 # ==============================
@@ -118,88 +144,18 @@ def init_resources():
     if bm25_model is None:
         bm25_corpus_tokens = []
         for item in metadata:
+            icd_text = _icd_text(item)  # ICD_요약 우선, 없으면 ICD 키워드 정리본
             fields = " ".join([
                 item.get("제품명", "") or "",
-                item.get("성분명", "") or "",
-                item.get("의약품 상호작용", "") or "",
-                _clean_icd_string(item.get("ICD", "") or ""),
+                icd_text,  # 의미의 중심
+                icd_text,  # 부스팅 1 (중복 삽입로 가중)
+                # item.get("성분명", "") or "",
+                # item.get("의약품 상호작용", "") or "",
+                # _clean_icd_string(item.get("ICD", "") or ""),
             ])
             bm25_corpus_tokens.append(_tok(fields))
         bm25_model = BM25Okapi(bm25_corpus_tokens)
         print("[init] BM25 인덱스 구축 완료")
-
-
-
-# def search_similar_medicines(query: str, top_k: int = 1) -> list[dict]:
-#
-#     # 모델/인덱스/메타데이터가 아직 로딩 안됐으면 로딩
-#     if embedding_model is None or faiss_index is None or metadata is None:
-#         init_resources()
-#
-#     # query_lower = query.lower().strip()
-#     #
-#     # # 문자열 우선 검색(제품명, 의약품 상호작용, 성분명)
-#     # exact_matches = []
-#     # for item in metadata:
-#     #     제품명 = item.get('제품명', '').lower()
-#     #     성분명 = item.get('성분명', '').lower()
-#     #     의약품_상호작용 = item.get('의약품 상호작용', '').lower()
-#     #
-#     #     if (query_lower in 제품명) or (query_lower in 성분명) or (query_lower in 의약품_상호작용):
-#     #         item_copy = item.copy()
-#     #         item_copy["score"] = 0.0  # 정확 매칭은 최고 우선순위
-#     #         exact_matches.append(item_copy)
-#     #
-#     # # 문자열 검색 결과가 있으면 바로 반환
-#     # if exact_matches:
-#     #     return exact_matches[:top_k]
-#
-#
-#     # partial_matches: 문자열로 직접 매칭된 약 정보들을 담는 리스트
-#     partial_matches = []
-#
-#     for item in metadata:
-#         # 검색에 사용할 필드들 (제품명, 성분명, 병용금기약)
-#         searchable_fields = [
-#             item.get("제품명", ""),
-#             item.get("성분명", ""),
-#             item.get("의약품 상호작용", "")
-#         ]
-#
-#         # ICD 개별 분리
-#         icd_values = item.get("ICD", "")
-#         icd_list = [icd.strip() for icd in icd_values.split(',') if icd.strip()]
-#
-#         # ICD에서 '증상' 제거한 버전도 함께 추가
-#         icd_clean_list = [icd.replace("증상", "").strip() for icd in icd_list]
-#
-#         searchable_fields.extend(icd_clean_list)
-#
-#         # 사용자의 질의(query)에 위 필드들 중 일부라도 정확히 포함되어 있는지 확인
-#         # ex) query = "트롤락주와 병용하면 안되는 약" → (제품명, 성분명, 병용금기약)중에 트롤락주 데이터가 있다면 매칭
-#         if any(field in query for field in searchable_fields if field):
-#             matched_item = item.copy()
-#             matched_item["score"] = 0
-#             partial_matches.append(matched_item)
-#
-#     # 문자열 매칭된 결과가 있으면 벡터 검색은 스킵하고 바로 반환
-#     if partial_matches:
-#         return partial_matches[:top_k]
-#
-#
-#     # 문자열 검색 결과가 없을 경우, 벡터 유사도 검색으로 넘어감
-#     query_embedding = embedding_model.encode([query], normalize_embeddings=True, convert_to_numpy=True)     # 질의 벡터화
-#     distances, indices = faiss_index.search(query_embedding, top_k)                                         # 유사도 검색
-#
-#     results = []
-#     for i, idx in enumerate(indices[0]):
-#         if idx < len(metadata):
-#             result = metadata[idx].copy()
-#             result["score"] = float(distances[0][i])
-#             results.append(result)
-#
-#     return results
-
 
 
 
@@ -228,11 +184,30 @@ def search_similar_medicines(query: str, top_k: int = 1) -> List[Dict[str, Any]]
                          key=bm25_scores.__getitem__,
                          reverse=True)[:bm25_topN]
 
+
+    print("=== BM25 검색 결과 (idx → 제품명, 점수) ===")
+    for idx in bm25_ranked[:20]:
+        if idx < len(metadata):
+            print(f"[BM25 HIT] idx={idx}, 제품명={metadata[idx]['제품명']}, 점수={bm25_scores[idx]:.4f}")
+        else:
+            print(f"[BM25 HIT] idx={idx}, ( metadata 범위 초과)")
+    print("===========================================")
+
+
     # C) FAISS 랭킹
     emb_topN = max(50, top_k * FAISS_CAND_FACTOR)
     q_emb = embedding_model.encode([query], normalize_embeddings=True, convert_to_numpy=True)
     distances, indices = faiss_index.search(q_emb, emb_topN)
     faiss_ranked = [int(i) for i in indices[0] if i < len(metadata)]
+
+    print("=== FAISS 검색 결과 (idx → 제품명) ===")
+    for idx in indices[0]:
+        if idx < len(metadata):
+            print(f"[FAISS HIT] idx={idx}, 제품명={metadata[idx]['제품명']}")
+        else:
+            print(f"[FAISS HIT] idx={idx}, ( metadata 범위 초과)")
+    print("=======================================")
+
 
     # D) 검색 스킵 게이트: BM25/코사인이 모두 낮으면 반환 X
     bm25_best = float(max(bm25_scores)) if bm25_scores is not None and len(bm25_scores) else 0.0
@@ -244,7 +219,7 @@ def search_similar_medicines(query: str, top_k: int = 1) -> List[Dict[str, Any]]
         return []
 
     # E) RRF 결합 + ICD 부스팅
-    ranks_bm25 = {idx: r for r, idx in enumerate(bm25_ranked, start=1)}
+    ranks_bm25 = {idx: r for r, idx in enumerate(bm25_ranked, start=1) if bm25_scores[idx] >= MIN_BM25}
     ranks_faiss = {idx: r for r, idx in enumerate(faiss_ranked, start=1)}
     candidates = set(bm25_ranked) | set(faiss_ranked)
     if not candidates:
@@ -275,22 +250,3 @@ def search_similar_medicines(query: str, top_k: int = 1) -> List[Dict[str, Any]]
         results.append(rec)
 
     return results
-
-
-
-
-
-
-# ===== 테스트 코드 =====
-# if __name__ == "__main__":
-#
-#     # 자원 미리 로딩
-#     init_resources()
-#
-#     query = "머리가 너무 아픈데 어떤 약을 먹어야 할까?"
-#     result = search_similar_medicines(query)
-#
-#     print(f"검색 결과:{result}")
-#
-#     for i, res in enumerate(result):
-#         print(f"- 유사도 점수: {res['score']}")
