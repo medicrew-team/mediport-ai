@@ -2,6 +2,9 @@
 # 목적: 현재 search_similar_medicines()를 LangChain의 BaseRetriever로 감싸서
 #       LangChain 체인 내부에서 호출 가능하게 만든다.
 
+
+import asyncio
+
 from typing import List
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever

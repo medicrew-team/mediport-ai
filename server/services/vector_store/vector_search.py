@@ -7,16 +7,8 @@ from sentence_transformers import SentenceTransformer
 from server.config import BASE_DIR
 from typing import List, Dict, Any
 from rank_bm25 import BM25Okapi
+from server.services.vector_store.embedding_loader import encode_texts
 
-
-
-
-EMBEDDING_MODEL_NAME = "jhgan/ko-sroberta-multitask"                        # 임베딩 모델
-# EMBEDDING_MODEL_NAME = "snunlp/KR-SBERT-V40K-klueNLI-augSTS"              # 임베딩 모델
-# EMBEDDING_MODEL_NAME = "BM-K/KoSimCSE-roberta-multitask"                  # 임베딩 모델
-# EMBEDDING_MODEL_NAME = "nlpai-lab/KURE-v1"                                # 임베딩 모델
-# EMBEDDING_MODEL_NAME = "nlpai-lab/KoE5"                                   # 임베딩 모델
-# EMBEDDING_MODEL_NAME = "intfloat/multilingual-e5-large-instruct"          # 임베딩 모델
 
 
 FAISS_INDEX_PATH = os.path.join(BASE_DIR, "data/medicine_faiss.index")      # FAISS 인덱스 파일 경로
@@ -40,7 +32,7 @@ ICD_BOOST = 0.2           # ICD 키워드가 질의에 포함되면 가점(0.1~0
 BM25_CAND_FACTOR = 5      # 최종 top_k 대비 BM25 후보폭
 FAISS_CAND_FACTOR = 5     # 최종 top_k 대비 FAISS 후보폭
 MIN_BM25 = 1.0            # 검색 스킵 게이트: BM25 최소값
-MIN_COS = 0.35            # 검색 스킵 게이트: 코사인 최소값(0.30~0.45 튜닝)
+MIN_COS = 0.40            # 검색 스킵 게이트: 코사인 최소값(0.30~0.45 튜닝)
 # ============================== #
 
 
@@ -113,12 +105,12 @@ def init_resources():
     """모델/인덱스/메타데이터/BM25를 처음 1회만 로딩."""
     global embedding_model, faiss_index, metadata, bm25_model, bm25_corpus_tokens
 
-    if embedding_model is None:
-        try:
-            embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
-            print(f"[init] 모델 로딩 성공: {EMBEDDING_MODEL_NAME}")
-        except Exception as e:
-            raise RuntimeError(f"[init][에러] 모델 로딩 실패: {e}")
+    # if embedding_model is None:
+    #     try:
+    #         embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+    #         print(f"[init] 모델 로딩 성공: {EMBEDDING_MODEL_NAME}")
+    #     except Exception as e:
+    #         raise RuntimeError(f"[init][에러] 모델 로딩 실패: {e}")
 
     if faiss_index is None:
         if not os.path.exists(FAISS_INDEX_PATH):
@@ -196,7 +188,8 @@ def search_similar_medicines(query: str, top_k: int = 1) -> List[Dict[str, Any]]
 
     # C) FAISS 랭킹
     emb_topN = max(50, top_k * FAISS_CAND_FACTOR)
-    q_emb = embedding_model.encode([query], normalize_embeddings=True, convert_to_numpy=True)
+    # q_emb = embedding_model.encode([query], normalize_embeddings=True, convert_to_numpy=True)
+    q_emb = encode_texts([query])
     distances, indices = faiss_index.search(q_emb, emb_topN)
     faiss_ranked = [int(i) for i in indices[0] if i < len(metadata)]
 
@@ -213,8 +206,8 @@ def search_similar_medicines(query: str, top_k: int = 1) -> List[Dict[str, Any]]
     bm25_best = float(max(bm25_scores)) if bm25_scores is not None and len(bm25_scores) else 0.0
     cos_best = 0.0
     if len(indices) and len(indices[0]):
-        l2_best = float(distances[0][0])      # squared L2
-        cos_best = _l2_to_cos(l2_best)
+        l2_best = float(distances[0][0])      # squared L2 (작을수록 두 벡터가 가깝다.)
+        cos_best = _l2_to_cos(l2_best)        # L2 거리 → 코사인 유사도로 변환 (높을수록 가까움)
     if (bm25_best < MIN_BM25) and (cos_best < MIN_COS):
         return []
 

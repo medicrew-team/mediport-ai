@@ -42,3 +42,4 @@ def _load_openai_key_from_path(path: str) -> str:
         return f.read().strip()
 
 OPENAI_API_KEY = _load_openai_key_from_path(OPENAI_API_KEY_PATH)
+EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER")
