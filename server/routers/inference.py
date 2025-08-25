@@ -30,7 +30,7 @@ class InferenceRequest(BaseModel):
 
 
 NO_CONTEXT_MSG = (
-    "질문과 관련된 일반 의약품 정보가 현재 보유 중인 약품 데이터베이스에 존재하지 않습니다 😭"
+    "질문과 관련된 일반의약품 정보가 현재 보유 중인 약품 데이터베이스에 존재하지 않습니다 😭"
     " 증상 키워드나 약 이름을 조금 더 구체적으로 알려주시면 다시 찾아볼게요!🥺"
 )
 
@@ -153,6 +153,12 @@ async def post_inference_v2(request: InferenceRequest):
             user_input_for_search = await translate_async(user_input, source="auto", target="ko")
         else:
             user_input_for_search = user_input
+
+        # 벡터 검색 기준 언어는 영어이므로, 비영어 입력은 먼저 영어로 번역
+        # if target_lang != "en":
+        #     user_input_for_search = await translate_async(user_input, source="auto", target="en")
+        # else:
+        #     user_input_for_search = user_input
 
         # LangChain(GPT) 기반 RAG 실행 (체인 내부에서 retriever + prompt + LLM 모두 처리)
         lc_out = await asyncio.to_thread(answer_with_langchain_gpt, user_input_for_search)

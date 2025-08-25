@@ -1,25 +1,33 @@
 import os
 import json
 import faiss
+import anyio
+import asyncio
+
+
 from sentence_transformers import SentenceTransformer
 from server.config import BASE_DIR
+from server.services.vector_store.embedding_loader import encode_texts
+from deep_translator import GoogleTranslator
+
+
+
 
 os.environ.setdefault("HF_HOME", os.path.join(BASE_DIR, "cache"))
 os.environ.setdefault("TRANSFORMERS_CACHE", os.path.join(BASE_DIR, "cache"))
 
-EMBEDDING_MODEL_NAME = "jhgan/ko-sroberta-multitask"                        # 임베딩 모델
-# EMBEDDING_MODEL_NAME = "snunlp/KR-SBERT-V40K-klueNLI-augSTS"              # 임베딩 모델
+
 DATASET_PATH = os.path.join(BASE_DIR, "data/medicine_dataset.json")         # 증상 기반 일반 의약품 추천 데이터셋 (JSON 파일 경로)
 FAISS_INDEX_PATH = os.path.join(BASE_DIR, "data/medicine_faiss.index")      # FAISS 인덱스 파일 경로
 METADATA_JSON_PATH = os.path.join(BASE_DIR, "data/medicine_metadata.json")  # 메타데이터 JSON 경로
 
 
 # ===== 모델 로딩 =====
-embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+# embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
 
 
 # ===== FAISS 저장 함수 =====
-def save_dataset_to_faiss(dataset: list[dict]):
+async def save_dataset_to_faiss(dataset: list[dict]):
 
     # 검색에 사용할 텍스트만 추출
     # texts = [item["text"] for item in dataset]
@@ -28,7 +36,8 @@ def save_dataset_to_faiss(dataset: list[dict]):
     texts = [build_text_for_embedding(item) for item in dataset]
 
     # 텍스트 → 임베딩 벡터
-    embeddings = embedding_model.encode(texts, normalize_embeddings=True, convert_to_numpy=True)
+    # embeddings = embedding_model.encode(texts, normalize_embeddings=True, convert_to_numpy=True)
+    embeddings = encode_texts(texts)
 
     # FAISS 인덱스 생성
     index = faiss.IndexFlatL2(embeddings.shape[1])
@@ -51,21 +60,25 @@ def save_dataset_to_faiss(dataset: list[dict]):
 def build_text_for_embedding(item: dict) -> str:
 
     # 필수 필드 체크 (주의사항은 build_warning_text()에서 체크)
-    required_fields = ['제품명', '성분명', 'ICD', '복용법']
+    required_fields = ['제품명', '성분명', 'ICD', '복용법', 'ICD_요약']
 
     for field in required_fields:
         if not item.get(field):
             raise ValueError(f"필수 항목 누락: '{field}' 값이 없습니다.")
 
     # 각 증상 문자열 뒤에 " 증상" 이라는 단어를 붙임
-    icd_sentences = ', '.join([f"{s.strip()} 증상" for s in item.get('ICD', '').split(',')])
+    # icd_sentences = ', '.join([f"{s.strip()} 증상" for s in item.get('ICD', '').split(',')])
+
+    # ICD_요약 영어 번역
+    # translated_icd_summary = await translate_async(item['ICD_요약'], source="auto", target="en")
 
     return (
         # f"이 약은 {item.get('제품명', '')}입니다. "
         # f"{item.get('성분명', '')}이라는 성분을 포함하고 있으며, "
-        f"{item.get('제품명')} 약품은 {icd_sentences} 에 사용하거나 복용할 수 있습니다. "
+        f"{item.get('제품명')}은(는) {item.get('ICD_요약')}"
+        # f"{item.get('제품명')}은(는) {translated_icd_summary}"
         # f"복용법 또는 사용법은 다음과 같다: {item.get('복용법', '')}. "
-        f"{build_warning_text(item)}"
+        # f"{build_warning_text(item)}"
     )
 
 
@@ -118,6 +131,18 @@ def build_warning_text(item: dict) -> str:
     return ' '.join(parts)
 
 
+
+async def translate_async(text: str, *, source: str = "auto", target: str = "ko") -> str:
+    """
+        동기 방식의 GoogleTranslator.translate() 호출을 별도의 스레드에서 실행하여,
+        FastAPI와 같은 비동기 환경에서도 이벤트 루프를 블로킹하지 않고 번역을 수행하는 함수.
+    """
+    return await anyio.to_thread.run_sync(
+        lambda: GoogleTranslator(source=source, target=target).translate(text)
+    )
+
+
+
 # ===== FAISS 저장 및 메타데이터 저장 실행 코드 =====
 def load_dataset_from_json(json_path: str) -> list[dict]:
     with open(json_path, "r", encoding="utf-8") as f:
@@ -125,4 +150,4 @@ def load_dataset_from_json(json_path: str) -> list[dict]:
 
 if __name__ == "__main__":
     dataset = load_dataset_from_json(DATASET_PATH)
-    save_dataset_to_faiss(dataset)
+    asyncio.run(save_dataset_to_faiss(dataset))

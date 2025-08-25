@@ -22,7 +22,8 @@ class FakeRetriever(BaseRetriever):
 
         for item in hits:
             try:
-                content = build_text_for_embedding(item)
+                # content = build_text_for_embedding(item)
+                content = ""
             except Exception:
                 content = str(item)
             docs.append(Document(page_content=content, metadata=item))
