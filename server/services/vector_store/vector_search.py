@@ -8,6 +8,8 @@ from server.config import BASE_DIR
 from typing import List, Dict, Any
 from rank_bm25 import BM25Okapi
 from server.services.vector_store.embedding_loader import encode_texts
+from sentence_transformers import CrossEncoder
+
 
 
 
@@ -23,6 +25,7 @@ metadata: List[Dict[str, Any]] = None
 
 bm25_model: BM25Okapi | None = None
 bm25_corpus_tokens: List[List[str]] | None = None
+reranker_model: CrossEncoder | None = None   # Reranker 모델
 # ===============================
 
 
@@ -103,7 +106,7 @@ def _icd_any_overlap(meta: Dict[str, Any], q_tokens: List[str]) -> bool:
 def init_resources():
 
     """모델/인덱스/메타데이터/BM25를 처음 1회만 로딩."""
-    global embedding_model, faiss_index, metadata, bm25_model, bm25_corpus_tokens
+    global embedding_model, faiss_index, metadata, bm25_model, bm25_corpus_tokens, reranker_model
 
     # if embedding_model is None:
     #     try:
@@ -149,12 +152,40 @@ def init_resources():
         bm25_model = BM25Okapi(bm25_corpus_tokens)
         print("[init] BM25 인덱스 구축 완료")
 
+    # Reranker 초기화 (경량 cross-encoder)
+    if reranker_model is None:
+        try:
+            reranker_model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2", device="cpu")
+            print("[init] Reranker 모델 로딩 완료 (CPU)")
+        except Exception as e:
+            raise RuntimeError(f"[init][에러] Reranker 로딩 실패: {e}")
+
+
+
+def _rerank_with_cross_encoder(query: str, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    후보 문서들을 CrossEncoder reranker로 재정렬.
+    반환: 점수가 높은 순서대로 정렬된 후보 리스트
+    """
+    if not candidates:
+        return []
+
+    # 질문-문서 쌍 만들기 (ICD 요약 기준으로 비교)
+    pairs = [(query, c.get("ICD_요약", "") or c.get("제품명", "")) for c in candidates]
+
+    scores = reranker_model.predict(pairs)  # relevance 점수 예측
+    for c, s in zip(candidates, scores):
+        c["rerank_score"] = float(s)
+
+    # rerank_score 기준 내림차순 정렬
+    return sorted(candidates, key=lambda x: x["rerank_score"], reverse=True)
+
 
 
 # ==============================
 # 검색
 # ==============================
-def search_similar_medicines(query: str, top_k: int = 1) -> List[Dict[str, Any]]:
+def search_similar_medicines(query: str, top_k: int = 1, use_rerank: bool = False) -> List[Dict[str, Any]]:
     """
     하이브리드 검색:
       - BM25(키워드) + FAISS(임베딩) → RRF 결합
@@ -193,7 +224,7 @@ def search_similar_medicines(query: str, top_k: int = 1) -> List[Dict[str, Any]]
     distances, indices = faiss_index.search(q_emb, emb_topN)
     faiss_ranked = [int(i) for i in indices[0] if i < len(metadata)]
 
-    print("=== FAISS 검색 결과 (idx → 제품명) ===")
+    print("===== FAISS 검색 결과 (idx → 제품명) =====")
     for idx in indices[0]:
         if idx < len(metadata):
             print(f"[FAISS HIT] idx={idx}, 제품명={metadata[idx]['제품명']}")
@@ -234,12 +265,19 @@ def search_similar_medicines(query: str, top_k: int = 1) -> List[Dict[str, Any]]
 
         fused_scores[idx] = s
 
-    top_indices = sorted(candidates, key=lambda i: fused_scores[i], reverse=True)[:top_k]
-
-    results: List[Dict[str, Any]] = []
-    for i in top_indices:
+    # 최종 후보 뽑기 (예: top 10)
+    candidate_indices = sorted(candidates, key=lambda i: fused_scores[i], reverse=True)[:max(10, top_k)]
+    candidates_list: List[Dict[str, Any]] = []
+    for i in candidate_indices:
         rec = metadata[i].copy()
         rec["score"] = round(fused_scores[i], 6)
-        results.append(rec)
+        candidates_list.append(rec)
 
-    return results
+    # === Rerank 옵션 ===
+    if use_rerank:
+        reranked = _rerank_with_cross_encoder(query, candidates_list)
+        return reranked[:top_k]
+
+    # 기본: Rerank 안 쓰고 그대로 반환
+    return candidates_list[:top_k]
+
