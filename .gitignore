@@ -13,3 +13,15 @@ server/envs/
 data/*.index
 data/*_metadata.json
 
+/models/med-embed-finetune/1_Pooling/
+/models/med-embed-finetune/1_Pooling/config.json
+/models/med-embed-finetune/config.json
+/models/med-embed-finetune/config_sentence_transformers.json
+/models/med-embed-finetune/model.safetensors
+/models/med-embed-finetune/modules.json
+/models/med-embed-finetune/README.md
+/models/med-embed-finetune/sentence_bert_config.json
+/models/med-embed-finetune/special_tokens_map.json
+/models/med-embed-finetune/tokenizer.json
+/models/med-embed-finetune/tokenizer_config.json
+/models/med-embed-finetune/vocab.txt
