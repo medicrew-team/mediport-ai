@@ -1,8 +1,7 @@
 name: Docker Image CI/CD
 
 on:
-  push:
-    branches: [ develop ]  # 해당 브랜치에 push 이벤트가 발생할 때만 작동
+  workflow_dispatch:
 
 jobs:
   build-and-push:
